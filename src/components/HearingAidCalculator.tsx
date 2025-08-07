@@ -211,22 +211,12 @@ export default function HearingAidCalculator() {
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="kvkk"
-                    checked={data.kvkkConsent}
-                    onCheckedChange={(checked) => setData({ ...data, kvkkConsent: checked as boolean })}
-                  />
-                  <Label htmlFor="kvkk" className="text-sm">
-                    KVKK kapsamında kişisel verilerimin işlenmesini kabul ediyorum
-                  </Label>
-                </div>
-                <div className="ml-6">
+                <div>
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button variant="link" className="h-auto p-0 text-xs text-primary">
                         <FileText className="h-3 w-3 mr-1" />
-                        KVKK metnini oku
+                        KVKK aydınlatma metnini oku
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-4xl max-h-[80vh]">
@@ -291,6 +281,16 @@ export default function HearingAidCalculator() {
                       </ScrollArea>
                     </DialogContent>
                   </Dialog>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="kvkk"
+                    checked={data.kvkkConsent}
+                    onCheckedChange={(checked) => setData({ ...data, kvkkConsent: checked as boolean })}
+                  />
+                  <Label htmlFor="kvkk" className="text-sm">
+                    KVKK kapsamında kişisel verilerimin kullanılmasını kabul ediyorum
+                  </Label>
                 </div>
               </div>
 
