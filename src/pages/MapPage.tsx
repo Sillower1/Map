@@ -88,118 +88,236 @@ export default function MapPage() {
 
   const loadOSMData = async (map: OLMap) => {
     try {
-      // Fetch the OSM file
-      const response = await fetch('/map.osm');
-      const osmText = await response.text();
-
-      // Parse OSM XML data manually
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(osmText, 'text/xml');
+      // First try to load the OSM file if it exists
+      let osmLoaded = false;
       
-      // Extract nodes (points) from OSM data
-      const nodes = xmlDoc.getElementsByTagName('node');
-      const nodeMap: Map<string, { lat: number, lon: number, tags: Record<string, string> }> = new Map();
-      
-      // Build node lookup map
-      for (let i = 0; i < nodes.length; i++) {
-        const node = nodes[i];
-        const id = node.getAttribute('id') || '';
-        const lat = parseFloat(node.getAttribute('lat') || '0');
-        const lon = parseFloat(node.getAttribute('lon') || '0');
-        
-        const tags: Record<string, string> = {};
-        const tagElements = node.getElementsByTagName('tag');
-        for (let j = 0; j < tagElements.length; j++) {
-          const tag = tagElements[j];
-          const key = tag.getAttribute('k') || '';
-          const value = tag.getAttribute('v') || '';
-          tags[key] = value;
+      try {
+        const response = await fetch('/map.osm');
+        if (response.ok) {
+          const osmText = await response.text();
+          await parseOSMData(map, osmText);
+          osmLoaded = true;
         }
-        
-        nodeMap.set(id, { lat, lon, tags });
+      } catch (error) {
+        console.log('OSM dosyası bulunamadı, alternatif veri yükleniyor...');
       }
 
-      // Create vector layer for OSM data
-      const osmVectorSource = new VectorSource();
-
-      // Add node features to map
-      nodeMap.forEach((nodeData, nodeId) => {
-        // Only show nodes with interesting tags (buildings, amenities, etc.)
-        const interestingTags = ['building', 'amenity', 'shop', 'office', 'name'];
-        const hasInterestingTag = interestingTags.some(tag => nodeData.tags[tag]);
-        
-        if (hasInterestingTag || nodeData.tags.name) {
-          const feature = new Feature({
-            geometry: new Point(fromLonLat([nodeData.lon, nodeData.lat])),
-            data: { 
-              id: nodeId, 
-              type: 'osm_node',
-              ...nodeData.tags
-            }
-          });
-
-          let fillColor = '#319FDB';
-          let strokeColor = '#ffffff';
-          
-          // Color code by type
-          if (nodeData.tags.building) {
-            fillColor = '#8B5CF6'; // Purple for buildings
-          } else if (nodeData.tags.amenity) {
-            fillColor = '#10B981'; // Green for amenities
-          } else if (nodeData.tags.office) {
-            fillColor = '#F59E0B'; // Yellow for offices
-          }
-
-          feature.setStyle(new Style({
-            image: new Icon({
-              anchor: [0.5, 0.5],
-              src: "data:image/svg+xml;base64," + btoa(`
-                <svg width="12" height="12" viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="6" cy="6" r="5" fill="${fillColor}" stroke="${strokeColor}" stroke-width="2"/>
-                </svg>
-              `),
-            })
-          }));
-
-          osmVectorSource.addFeature(feature);
-        }
-      });
-
-      const osmVectorLayer = new VectorLayer({
-        source: osmVectorSource,
-      });
-
-      // Add the OSM layer to the map
-      map.addLayer(osmVectorLayer);
-
-      // Fit view to OSM data extent if features exist
-      const features = osmVectorSource.getFeatures();
-      if (features.length > 0) {
-        const extent = osmVectorSource.getExtent();
-        map.getView().fit(extent, { 
-          padding: [50, 50, 50, 50],
-          maxZoom: 18
-        });
+      // If OSM file is not available, load sample campus data
+      if (!osmLoaded) {
+        await loadSampleCampusData(map);
       }
-
-      // Add OSM click handler
-      map.on("click", (event) => {
-        const features = map.getFeaturesAtPixel(event.pixel);
-        if (features.length > 0) {
-          const feature = features[0];
-          const data = feature.get("data");
-          
-          if (data?.type === 'osm_node') {
-            console.log('OSM Node clicked:', data);
-            // You can add OSM node selection logic here
-          }
-        }
-      });
 
     } catch (error) {
-      console.error('Error loading OSM data:', error);
-      // Fall back to default view if OSM loading fails
+      console.error('Error loading map data:', error);
+      // Load fallback data
+      await loadSampleCampusData(map);
     }
+  };
+
+  const parseOSMData = async (map: OLMap, osmText: string) => {
+    // Parse OSM XML data manually
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(osmText, 'text/xml');
+    
+    // Extract nodes (points) from OSM data
+    const nodes = xmlDoc.getElementsByTagName('node');
+    const nodeMap: Map<string, { lat: number, lon: number, tags: Record<string, string> }> = new Map();
+    
+    // Build node lookup map
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      const id = node.getAttribute('id') || '';
+      const lat = parseFloat(node.getAttribute('lat') || '0');
+      const lon = parseFloat(node.getAttribute('lon') || '0');
+      
+      const tags: Record<string, string> = {};
+      const tagElements = node.getElementsByTagName('tag');
+      for (let j = 0; j < tagElements.length; j++) {
+        const tag = tagElements[j];
+        const key = tag.getAttribute('k') || '';
+        const value = tag.getAttribute('v') || '';
+        tags[key] = value;
+      }
+      
+      nodeMap.set(id, { lat, lon, tags });
+    }
+
+    // Create vector layer for OSM data
+    const osmVectorSource = new VectorSource();
+
+    // Add node features to map
+    nodeMap.forEach((nodeData, nodeId) => {
+      // Only show nodes with interesting tags (buildings, amenities, etc.)
+      const interestingTags = ['building', 'amenity', 'shop', 'office', 'name'];
+      const hasInterestingTag = interestingTags.some(tag => nodeData.tags[tag]);
+      
+      if (hasInterestingTag || nodeData.tags.name) {
+        const feature = new Feature({
+          geometry: new Point(fromLonLat([nodeData.lon, nodeData.lat])),
+          data: { 
+            id: nodeId, 
+            type: 'osm_node',
+            ...nodeData.tags
+          }
+        });
+
+        let fillColor = '#319FDB';
+        let strokeColor = '#ffffff';
+        
+        // Color code by type
+        if (nodeData.tags.building) {
+          fillColor = '#8B5CF6'; // Purple for buildings
+        } else if (nodeData.tags.amenity) {
+          fillColor = '#10B981'; // Green for amenities
+        } else if (nodeData.tags.office) {
+          fillColor = '#F59E0B'; // Yellow for offices
+        }
+
+        feature.setStyle(new Style({
+          image: new Icon({
+            anchor: [0.5, 0.5],
+            src: "data:image/svg+xml;base64," + btoa(`
+              <svg width="12" height="12" viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="6" cy="6" r="5" fill="${fillColor}" stroke="${strokeColor}" stroke-width="2"/>
+              </svg>
+            `),
+          })
+        }));
+
+        osmVectorSource.addFeature(feature);
+      }
+    });
+
+    const osmVectorLayer = new VectorLayer({
+      source: osmVectorSource,
+    });
+
+    // Add the OSM layer to the map
+    map.addLayer(osmVectorLayer);
+
+    // Fit view to OSM data extent if features exist
+    const features = osmVectorSource.getFeatures();
+    if (features.length > 0) {
+      const extent = osmVectorSource.getExtent();
+      map.getView().fit(extent, { 
+        padding: [50, 50, 50, 50],
+        maxZoom: 18
+      });
+    }
+
+    console.log('OSM verisi başarıyla yüklendi:', features.length, 'öğe');
+  };
+
+  const loadSampleCampusData = async (map: OLMap) => {
+    // Sample campus buildings and locations for DEU
+    const campusLocations = [
+      {
+        id: 'main_building',
+        name: 'Ana Bina',
+        type: 'building',
+        lat: 38.3850,
+        lon: 27.1815,
+        description: 'Rektörlük ve Ana İdari Bina'
+      },
+      {
+        id: 'engineering_faculty',
+        name: 'Mühendislik Fakültesi',
+        type: 'building',
+        lat: 38.3845,
+        lon: 27.1820,
+        description: 'Mühendislik Fakültesi Binası'
+      },
+      {
+        id: 'library',
+        name: 'Kütüphane',
+        type: 'amenity',
+        lat: 38.3855,
+        lon: 27.1810,
+        description: 'Merkez Kütüphane'
+      },
+      {
+        id: 'cafeteria',
+        name: 'Kafeterya',
+        type: 'amenity',
+        lat: 38.3848,
+        lon: 27.1825,
+        description: 'Öğrenci Kafeteryası'
+      },
+      {
+        id: 'computer_lab',
+        name: 'Bilgisayar Laboratuvarı',
+        type: 'office',
+        lat: 38.3852,
+        lon: 27.1818,
+        description: 'YBS Bilgisayar Laboratuvarı'
+      },
+      {
+        id: 'sports_center',
+        name: 'Spor Merkezi',
+        type: 'amenity',
+        lat: 38.3840,
+        lon: 27.1830,
+        description: 'Öğrenci Spor Merkezi'
+      }
+    ];
+
+    const campusVectorSource = new VectorSource();
+
+    campusLocations.forEach((location) => {
+      const feature = new Feature({
+        geometry: new Point(fromLonLat([location.lon, location.lat])),
+        data: { 
+          id: location.id, 
+          type: 'campus_location',
+          name: location.name,
+          description: location.description,
+          category: location.type
+        }
+      });
+
+      let fillColor = '#319FDB';
+      
+      // Color code by type
+      if (location.type === 'building') {
+        fillColor = '#8B5CF6'; // Purple for buildings
+      } else if (location.type === 'amenity') {
+        fillColor = '#10B981'; // Green for amenities
+      } else if (location.type === 'office') {
+        fillColor = '#F59E0B'; // Yellow for offices
+      }
+
+      feature.setStyle(new Style({
+        image: new Icon({
+          anchor: [0.5, 0.5],
+          src: "data:image/svg+xml;base64," + btoa(`
+            <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="8" cy="8" r="7" fill="${fillColor}" stroke="#ffffff" stroke-width="2"/>
+              <text x="8" y="12" text-anchor="middle" fill="white" font-size="8" font-weight="bold">
+                ${location.type === 'building' ? '🏢' : location.type === 'amenity' ? '🏛️' : '💼'}
+              </text>
+            </svg>
+          `),
+        })
+      }));
+
+      campusVectorSource.addFeature(feature);
+    });
+
+    const campusVectorLayer = new VectorLayer({
+      source: campusVectorSource,
+    });
+
+    // Add the campus layer to the map
+    map.addLayer(campusVectorLayer);
+
+    // Fit view to campus data
+    const extent = campusVectorSource.getExtent();
+    map.getView().fit(extent, { 
+      padding: [100, 100, 100, 100],
+      maxZoom: 17
+    });
+
+    console.log('Örnek kampüs verisi yüklendi:', campusLocations.length, 'lokasyon');
   };
 
   const fetchData = async () => {
