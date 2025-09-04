@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MapPin, Clock, User, Building } from "lucide-react";
-import Map from "ol/Map";
+import { Map as OLMap } from "ol";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM";
@@ -13,7 +13,7 @@ import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import Feature from "ol/Feature";
 import Point from "ol/geom/Point";
-import { Style, Icon } from "ol/style";
+import { Style, Icon, Fill, Stroke } from "ol/style";
 import { fromLonLat } from "ol/proj";
 import "ol/ol.css";
 
@@ -50,7 +50,7 @@ interface SelectedItem {
 
 export default function MapPage() {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<Map | null>(null);
+  const mapInstanceRef = useRef<OLMap | null>(null);
   const [facultyMembers, setFacultyMembers] = useState<FacultyMember[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,10 +62,10 @@ export default function MapPage() {
     fetchData();
   }, []);
 
-  const initializeMap = () => {
+  const initializeMap = async () => {
     if (!mapRef.current) return;
 
-    const map = new Map({
+    const map = new OLMap({
       target: mapRef.current,
       layers: [
         new TileLayer({
@@ -79,6 +79,125 @@ export default function MapPage() {
     });
 
     mapInstanceRef.current = map;
+
+    // Load and display OSM data
+    await loadOSMData(map);
+  };
+
+  const loadOSMData = async (map: OLMap) => {
+    try {
+      // Fetch the OSM file
+      const response = await fetch('/map.osm');
+      const osmText = await response.text();
+
+      // Parse OSM XML data manually
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(osmText, 'text/xml');
+      
+      // Extract nodes (points) from OSM data
+      const nodes = xmlDoc.getElementsByTagName('node');
+      const nodeMap: Map<string, { lat: number, lon: number, tags: Record<string, string> }> = new Map();
+      
+      // Build node lookup map
+      for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i];
+        const id = node.getAttribute('id') || '';
+        const lat = parseFloat(node.getAttribute('lat') || '0');
+        const lon = parseFloat(node.getAttribute('lon') || '0');
+        
+        const tags: Record<string, string> = {};
+        const tagElements = node.getElementsByTagName('tag');
+        for (let j = 0; j < tagElements.length; j++) {
+          const tag = tagElements[j];
+          const key = tag.getAttribute('k') || '';
+          const value = tag.getAttribute('v') || '';
+          tags[key] = value;
+        }
+        
+        nodeMap.set(id, { lat, lon, tags });
+      }
+
+      // Create vector layer for OSM data
+      const osmVectorSource = new VectorSource();
+
+      // Add node features to map
+      nodeMap.forEach((nodeData, nodeId) => {
+        // Only show nodes with interesting tags (buildings, amenities, etc.)
+        const interestingTags = ['building', 'amenity', 'shop', 'office', 'name'];
+        const hasInterestingTag = interestingTags.some(tag => nodeData.tags[tag]);
+        
+        if (hasInterestingTag || nodeData.tags.name) {
+          const feature = new Feature({
+            geometry: new Point(fromLonLat([nodeData.lon, nodeData.lat])),
+            data: { 
+              id: nodeId, 
+              type: 'osm_node',
+              ...nodeData.tags
+            }
+          });
+
+          let fillColor = '#319FDB';
+          let strokeColor = '#ffffff';
+          
+          // Color code by type
+          if (nodeData.tags.building) {
+            fillColor = '#8B5CF6'; // Purple for buildings
+          } else if (nodeData.tags.amenity) {
+            fillColor = '#10B981'; // Green for amenities
+          } else if (nodeData.tags.office) {
+            fillColor = '#F59E0B'; // Yellow for offices
+          }
+
+          feature.setStyle(new Style({
+            image: new Icon({
+              anchor: [0.5, 0.5],
+              src: "data:image/svg+xml;base64," + btoa(`
+                <svg width="12" height="12" viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="6" cy="6" r="5" fill="${fillColor}" stroke="${strokeColor}" stroke-width="2"/>
+                </svg>
+              `),
+            })
+          }));
+
+          osmVectorSource.addFeature(feature);
+        }
+      });
+
+      const osmVectorLayer = new VectorLayer({
+        source: osmVectorSource,
+      });
+
+      // Add the OSM layer to the map
+      map.addLayer(osmVectorLayer);
+
+      // Fit view to OSM data extent if features exist
+      const features = osmVectorSource.getFeatures();
+      if (features.length > 0) {
+        const extent = osmVectorSource.getExtent();
+        map.getView().fit(extent, { 
+          padding: [50, 50, 50, 50],
+          maxZoom: 18
+        });
+      }
+
+      // Add OSM click handler
+      map.on("click", (event) => {
+        const features = map.getFeaturesAtPixel(event.pixel);
+        if (features.length > 0) {
+          const feature = features[0];
+          const data = feature.get("data");
+          
+          if (data?.type === 'osm_node') {
+            console.log('OSM Node clicked:', data);
+            // You can add OSM node selection logic here
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('Error loading OSM data:', error);
+      // Fall back to default view if OSM loading fails
+    }
   };
 
   const fetchData = async () => {
