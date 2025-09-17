@@ -207,7 +207,16 @@ export default function MapPage() {
                   />
                   {/* Overlay for better marker visibility */}
                   <div className="absolute inset-0 bg-black/10" />
-                  
+
+                  {/* Transformed layer that follows pan/zoom for markers */}
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+                      transformOrigin: 'center center',
+                      pointerEvents: 'none'
+                    }}
+                  >
                   {/* Location Pins */}
                   {loading ? (
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -255,6 +264,7 @@ export default function MapPage() {
                       );
                     })
                   )}
+                  </div>
                   
                   {/* Floor Labels */}
                   <div className="absolute bottom-4 left-4 space-y-1">
