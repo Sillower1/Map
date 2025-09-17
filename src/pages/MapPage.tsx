@@ -212,7 +212,7 @@ export default function MapPage() {
                   <img 
                     src="/maps.png" 
                     alt="Kampüs Haritası" 
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-150 select-none pointer-events-none"
+                    className="absolute inset-0 w-full h-full object-contain transition-transform duration-150 select-none pointer-events-none"
                     style={{ 
                       transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
                       transformOrigin: 'center center'
@@ -246,14 +246,11 @@ export default function MapPage() {
                           key={marker.id}
                           data-marker
                           className={cn(
-                            "absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-200 z-10",
-                            "hover:scale-110 focus:scale-110 focus:outline-none",
-                            isSelected ? (bumpMarkerId === marker.id ? "scale-150 z-20" : "scale-125 z-20") : ""
+                            "absolute transition-all duration-200 z-10 focus:outline-none",
                           )}
                           style={{ 
                             left: `${marker.x_position}%`, 
                             top: `${marker.y_position}%`,
-                            transform: `translate(-50%, -50%)`,
                             pointerEvents: 'auto'
                           }}
                           onClick={(ev) => {
@@ -265,19 +262,27 @@ export default function MapPage() {
                             }, 220);
                           }}
                         >
-                          <Icon 
-                            className="drop-shadow-lg" 
-                            style={{ 
-                              color: marker.color,
-                              width: `${marker.size || 24}px`,
-                              height: `${marker.size || 24}px`
-                            }} 
-                          />
-                          {isSelected && marker.description && (
-                            <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg p-2 shadow-lg min-w-[200px] z-30">
-                              <p className="text-xs text-muted-foreground whitespace-pre-line">{marker.description}</p>
-                            </div>
-                          )}
+                          <div
+                            className={cn(
+                              "transform -translate-x-1/2 -translate-y-1/2",
+                              isSelected ? (bumpMarkerId === marker.id ? "scale-150" : "scale-125") : "scale-100"
+                            )}
+                            style={{ transition: 'transform 200ms' }}
+                          >
+                            <Icon 
+                              className="drop-shadow-lg" 
+                              style={{ 
+                                color: marker.color,
+                                width: `${marker.size || 24}px`,
+                                height: `${marker.size || 24}px`
+                              }} 
+                            />
+                            {isSelected && marker.description && (
+                              <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg p-2 shadow-lg min-w-[200px] z-30">
+                                <p className="text-xs text-muted-foreground whitespace-pre-line">{marker.description}</p>
+                              </div>
+                            )}
+                          </div>
                         </button>
                       );
                     })
