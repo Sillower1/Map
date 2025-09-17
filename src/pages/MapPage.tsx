@@ -24,6 +24,7 @@ interface Marker {
   y_position: number;
   color: string;
   is_active: boolean;
+  size?: number;
 }
 
 const getIconForType = (type: string) => {
@@ -222,12 +223,14 @@ export default function MapPage() {
                           }}
                           onClick={() => setSelectedLocation(marker.id)}
                         >
-                          <div 
-                            className="w-12 h-12 rounded-full shadow-lg flex items-center justify-center border-2 border-white"
-                            style={{ backgroundColor: marker.color }}
-                          >
-                            <Icon className="w-6 h-6 text-white" />
-                          </div>
+                          <Icon 
+                            className="drop-shadow-lg" 
+                            style={{ 
+                              color: marker.color,
+                              width: `${marker.size || 24}px`,
+                              height: `${marker.size || 24}px`
+                            }} 
+                          />
                           
                           {isSelected && (
                             <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 bg-card border border-border rounded-lg p-2 shadow-lg min-w-[200px] z-30 ring-4 ring-primary/50">
@@ -282,11 +285,14 @@ export default function MapPage() {
                           onClick={() => setSelectedLocation(marker.id)}
                         >
                           <div className="flex items-start space-x-3">
-                            <div 
-                              className="w-10 h-10 rounded-lg flex items-center justify-center"
-                              style={{ backgroundColor: marker.color }}
-                            >
-                              <Icon className="w-5 h-5 text-white" />
+                            <div className="w-10 h-10 flex items-center justify-center">
+                              <Icon 
+                                style={{ 
+                                  color: marker.color,
+                                  width: `${Math.min(marker.size || 24, 32)}px`,
+                                  height: `${Math.min(marker.size || 24, 32)}px`
+                                }} 
+                              />
                             </div>
                             <div className="flex-1 min-w-0">
                               <h4 className="font-medium text-sm text-foreground truncate">
