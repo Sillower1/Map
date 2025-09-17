@@ -69,32 +69,11 @@ export default function MapPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapImageRef = useRef<HTMLImageElement>(null);
-  const [imageOverlayStyle, setImageOverlayStyle] = useState<{ left: number; top: number; width: number; height: number }>({ left: 0, top: 0, width: 0, height: 0 });
 
   useEffect(() => {
     fetchMarkers();
   }, []);
 
-  // Recompute overlay box to match rendered image rect
-  useEffect(() => {
-    const computeOverlay = () => {
-      const container = mapContainerRef.current;
-      const img = mapImageRef.current;
-      if (!container || !img) return;
-      const imgRect = img.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
-      setImageOverlayStyle({
-        left: imgRect.left - containerRect.left,
-        top: imgRect.top - containerRect.top,
-        width: imgRect.width,
-        height: imgRect.height,
-      });
-    };
-    computeOverlay();
-    window.addEventListener('resize', computeOverlay);
-    return () => window.removeEventListener('resize', computeOverlay);
-  }, [zoom, pan]);
 
   // Sayfanın herhangi bir boş yerine tıklamada baloncuğu kapat
   useEffect(() => {
@@ -239,20 +218,17 @@ export default function MapPage() {
                       transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
                       transformOrigin: 'center center'
                     }}
-                    ref={mapImageRef}
                     draggable={false}
                   />
                   {/* Overlay for better marker visibility */}
                   <div className="absolute inset-0 bg-black/10" />
 
-                  {/* Overlay exactly matching rendered image box */}
+                  {/* Overlay with same transform as image */}
                   <div
-                    className="absolute"
+                    className="absolute inset-0"
                     style={{
-                      left: imageOverlayStyle.left,
-                      top: imageOverlayStyle.top,
-                      width: imageOverlayStyle.width,
-                      height: imageOverlayStyle.height,
+                      transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+                      transformOrigin: 'center center',
                       pointerEvents: 'none'
                     }}
                   >
