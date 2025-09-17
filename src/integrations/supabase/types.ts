@@ -169,6 +169,7 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           name: string
+          size: number | null
           type: string
           updated_at: string
           x_position: number
@@ -184,6 +185,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           name: string
+          size?: number | null
           type: string
           updated_at?: string
           x_position: number
@@ -199,6 +201,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           name?: string
+          size?: number | null
           type?: string
           updated_at?: string
           x_position?: number
