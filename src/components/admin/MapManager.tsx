@@ -26,6 +26,7 @@ interface Marker {
   created_at: string;
   size?: number;
   icon?: string | null;
+  floor_info?: string | null;
 }
 
 interface FormData {
@@ -40,6 +41,7 @@ interface FormData {
   is_active: boolean;
   size: number;
   icon: string;
+  floor_info?: string;
 }
 
 const markerTypes = {
@@ -71,6 +73,7 @@ export default function MapManager() {
     is_active: true,
     size: 24,
     icon: 'map-pin',
+    floor_info: ''
   });
   const [loading, setLoading] = useState(false);
   const [mapClickMode, setMapClickMode] = useState(false);
@@ -154,6 +157,7 @@ export default function MapManager() {
         is_active: formData.is_active,
         size: formData.size,
         icon: formData.icon,
+        floor_info: formData.floor_info || null,
         created_by: (await supabase.auth.getUser()).data.user?.id || '',
       };
 
@@ -198,6 +202,7 @@ export default function MapManager() {
       is_active: marker.is_active,
       size: marker.size || 24,
       icon: marker.icon || 'map-pin',
+      floor_info: marker.floor_info || ''
     });
     setIsDialogOpen(true);
   };
@@ -231,6 +236,8 @@ export default function MapManager() {
       color: '#6B7280',
       is_active: true,
       size: 24,
+      icon: 'map-pin',
+      floor_info: ''
     });
     setEditingId(null);
     setMapClickMode(false);
@@ -324,6 +331,16 @@ export default function MapManager() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="floor_info">Kat Bilgisi (İsteğe bağlı)</Label>
+                <Input
+                  id="floor_info"
+                  placeholder="Örn: 3. Kat - Ofisler"
+                  value={formData.floor_info || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, floor_info: e.target.value }))}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">

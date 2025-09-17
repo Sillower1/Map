@@ -276,7 +276,7 @@ export default function MapPage() {
                                 height: `${marker.size || 24}px`
                               }} 
                             />
-                            {isSelected && marker.description && (
+                            {(isSelected && (marker.description || (marker as any).floor_info)) && (
                               <div
                                 className="absolute top-full mt-2 left-1/2 bg-card border border-border rounded-lg p-2 shadow-lg min-w-[200px] z-30"
                                 style={{
@@ -284,9 +284,14 @@ export default function MapPage() {
                                   transformOrigin: 'top center'
                                 }}
                               >
-                                <p className="text-xs text-muted-foreground whitespace-pre-line">{marker.description}</p>
+                                {(marker as any).floor_info && (
+                                  <div className="text-[11px] font-medium text-primary mb-1">{(marker as any).floor_info}</div>
+                                )}
+                                {marker.description && (
+                                  <p className="text-xs text-muted-foreground whitespace-pre-line">{marker.description}</p>
+                                )}
                               </div>
-                             )}
+                            )}
                           </div>
                         </button>
                       );
