@@ -253,7 +253,7 @@ export default function MapPage() {
                           style={{ 
                             left: `${marker.x_position}%`, 
                             top: `${marker.y_position}%`,
-                            transform: `translate(-50%, -50%) scale(${1/zoom})`,
+                            transform: `translate(-50%, -50%)`,
                             pointerEvents: 'auto'
                           }}
                           onClick={(ev) => {
