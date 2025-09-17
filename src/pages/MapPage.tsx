@@ -277,10 +277,16 @@ export default function MapPage() {
                               }} 
                             />
                             {isSelected && marker.description && (
-                              <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg p-2 shadow-lg min-w-[200px] z-30">
+                              <div
+                                className="absolute top-full mt-2 left-1/2 bg-card border border-border rounded-lg p-2 shadow-lg min-w-[200px] z-30"
+                                style={{
+                                  transform: `translate(-50%, 0) scale(${1/zoom})`,
+                                  transformOrigin: 'top center'
+                                }}
+                              >
                                 <p className="text-xs text-muted-foreground whitespace-pre-line">{marker.description}</p>
                               </div>
-                            )}
+                             )}
                           </div>
                         </button>
                       );
