@@ -223,12 +223,10 @@ export default function MapPage() {
                   {/* Overlay for better marker visibility */}
                   <div className="absolute inset-0 bg-black/10" />
 
-                  {/* Overlay with same transform as image */}
+                  {/* Marker overlay - no transform, markers will be individually positioned */}
                   <div
                     className="absolute inset-0"
                     style={{
-                      transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
-                      transformOrigin: 'center center',
                       pointerEvents: 'none'
                     }}
                   >
@@ -252,6 +250,7 @@ export default function MapPage() {
                           style={{ 
                             left: `${marker.x_position}%`,
                             top: `${marker.y_position}%`,
+                            transform: `translate(-50%, -50%) scale(${1/zoom}) translate(${-pan.x / zoom}px, ${-pan.y / zoom}px)`,
                             pointerEvents: 'auto'
                           }}
                           onClick={(ev) => {
@@ -265,7 +264,7 @@ export default function MapPage() {
                         >
                           <div
                             className={cn(
-                              "transform -translate-x-1/2 -translate-y-1/2",
+                              "transform",
                               isSelected ? (bumpMarkerId === marker.id ? "scale-150" : "scale-125") : "scale-100"
                             )}
                             style={{ transition: 'transform 200ms' }}
