@@ -96,11 +96,10 @@ export default function MapPage() {
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging || zoom === 1) return; // Don't pan when zoom is 1x
     e.preventDefault();
-    const newPan = {
-      x: (e.clientX - dragStart.x) * zoom,
-      y: (e.clientY - dragStart.y) * zoom
-    };
-    setPan(newPan);
+    setPan({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y
+    });
   };
 
   const handleMouseUp = () => {
@@ -189,7 +188,7 @@ export default function MapPage() {
                     alt="Kampüs Haritası" 
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-150 select-none pointer-events-none"
                     style={{ 
-                      transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`,
+                      transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
                       transformOrigin: 'center center'
                     }}
                     draggable={false}
