@@ -209,27 +209,26 @@ export default function MapPage() {
                     }
                   }}
                 >
-                  {/* Map Background Image */}
-                  <img 
-                    src="/maps.png" 
-                    alt="Kampüs Haritası" 
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-150 select-none pointer-events-none"
-                    style={{ 
-                      transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
-                      transformOrigin: 'center center'
-                    }}
-                    draggable={false}
-                  />
-                  {/* Overlay for better marker visibility */}
-                  <div className="absolute inset-0 bg-black/10" />
-
-                  {/* Marker overlay - no transform, markers will be individually positioned */}
+                  {/* Transformed canvas: image + markers share same transform */}
                   <div
                     className="absolute inset-0"
                     style={{
-                      pointerEvents: 'none'
+                      transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+                      transformOrigin: 'center center'
                     }}
                   >
+                    {/* Map Background Image */}
+                    <img 
+                      src="/maps.png" 
+                      alt="Kampüs Haritası" 
+                      className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
+                      draggable={false}
+                    />
+                    {/* Overlay for better marker visibility */}
+                    <div className="absolute inset-0 bg-black/10 pointer-events-none" />
+
+                    {/* Marker overlay within transformed canvas */}
+                    <div className="absolute inset-0">
                   {/* Location Pins */}
                   {loading ? (
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -250,7 +249,7 @@ export default function MapPage() {
                           style={{ 
                             left: `${marker.x_position}%`,
                             top: `${marker.y_position}%`,
-                            transform: `translate(-50%, -50%) scale(${1/zoom}) translate(${-pan.x / zoom}px, ${-pan.y / zoom}px)`,
+                            transform: `translate(-50%, -50%)`,
                             pointerEvents: 'auto'
                           }}
                           onClick={(ev) => {
@@ -287,6 +286,7 @@ export default function MapPage() {
                       );
                     })
                   )}
+                    </div>
                   </div>
                   
                   {/* Floor Labels */}
