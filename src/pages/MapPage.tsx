@@ -60,7 +60,6 @@ const getLocationTypeConfig = (type: string) => {
 
 export default function MapPage() {
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
-  const [sideDetailsId, setSideDetailsId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string>('all');
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -189,10 +188,9 @@ export default function MapPage() {
                   onMouseUp={handleMouseUp}
                   onMouseLeave={handleMouseLeave}
                   onClick={(e) => {
-                    // map boş bir yere tıklandıysa detay panelini kapat
+                    // Haritanın boş alanına tıklanınca baloncuğu kapat
                     if ((e.target as HTMLElement).closest('button[data-marker]') == null) {
                       setSelectedLocation(null);
-                      setSideDetailsId(null);
                     }
                   }}
                 >
@@ -238,7 +236,6 @@ export default function MapPage() {
                           onClick={(ev) => {
                             ev.stopPropagation();
                             setSelectedLocation(marker.id);
-                            setSideDetailsId(marker.id);
                           }}
                         >
                           <Icon 
@@ -249,6 +246,11 @@ export default function MapPage() {
                               height: `${marker.size || 24}px`
                             }} 
                           />
+                          {isSelected && marker.description && (
+                            <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg p-2 shadow-lg min-w-[200px] z-30">
+                              <p className="text-xs text-muted-foreground whitespace-pre-line">{marker.description}</p>
+                            </div>
+                          )}
                         </button>
                       );
                     })
@@ -265,36 +267,13 @@ export default function MapPage() {
             </Card>
           </div>
 
-          {/* Side Details + Location List */}
+          {/* Location List */}
           <div>
             <Card>
               <CardHeader>
                 <CardTitle className="text-xl text-primary">Konum Listesi</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                {sideDetailsId && (
-                  <div className="p-4 border-b border-border bg-card/70">
-                    {(() => {
-                      const m = markers.find(m => m.id === sideDetailsId);
-                      if (!m) return null;
-                      const Icon = getIconByKey(m.icon);
-                      return (
-                        <div className="flex items-start space-x-3">
-                          <Icon style={{ color: m.color, width: `${Math.min(m.size || 24, 32)}px`, height: `${Math.min(m.size || 24, 32)}px` }} />
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between">
-                              <h4 className="font-semibold text-sm text-primary">{m.name}</h4>
-                              <Button size="sm" variant="ghost" onClick={() => { setSelectedLocation(null); setSideDetailsId(null); }}>Kapat</Button>
-                            </div>
-                            {m.description && (
-                              <p className="text-xs text-muted-foreground mt-1">{m.description}</p>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
                 <div className="max-h-96 overflow-y-auto">
                   {loading ? (
                     <div className="p-4 text-center text-muted-foreground">
@@ -312,7 +291,7 @@ export default function MapPage() {
                             "w-full p-4 border-b border-border hover:bg-muted/50 text-left transition-colors",
                             isSelected ? "bg-primary/10 border-primary/20" : ""
                           )}
-                          onClick={() => { setSelectedLocation(marker.id); setSideDetailsId(marker.id); }}
+                          onClick={() => { setSelectedLocation(marker.id); }}
                         >
                           <div className="flex items-start space-x-3">
                             <div className="w-10 h-10 flex items-center justify-center">
@@ -336,11 +315,6 @@ export default function MapPage() {
                                   {locationTypes[marker.type as keyof typeof locationTypes]?.label || 'Diğer'}
                                 </Badge>
                               </div>
-                              {marker.description && (
-                                <p className="text-xs text-muted-foreground mt-1 truncate">
-                                  {marker.description}
-                                </p>
-                              )}
                             </div>
                           </div>
                         </button>
