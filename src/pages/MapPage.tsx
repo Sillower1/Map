@@ -1,625 +1,340 @@
-import { useState, useEffect, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Clock, User, Building } from "lucide-react";
+import { useState, useEffect, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { 
+  MapPin, 
+  Users, 
+  BookOpen, 
+  Coffee, 
+  Car, 
+  Wifi, 
+  Printer,
+  Building
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-// OpenLayers imports
-import OLMap from "ol/Map";
-import View from "ol/View";
-import TileLayer from "ol/layer/Tile";
-import OSMSource from "ol/source/OSM";
-import VectorLayer from "ol/layer/Vector";
-import VectorSource from "ol/source/Vector";
-import Feature from "ol/Feature";
-import Point from "ol/geom/Point";
-import { Style, Icon, Fill, Stroke } from "ol/style";
-import { fromLonLat } from "ol/proj";
-import "ol/ol.css";
-
-interface FacultyMember {
+interface Marker {
   id: string;
   name: string;
-  title: string;
-  department: string;
-  office?: string;
-  image_url?: string;
-  location_lat?: number;
-  location_lon?: number;
+  type: string;
+  description?: string;
+  x_position: number;
+  y_position: number;
+  color: string;
+  is_active: boolean;
 }
 
-interface Course {
-  id: string;
-  course_name: string;
-  course_code: string;
-  instructor: string;
-  room: string;
-  day_of_week: string;
-  start_time: string;
-  end_time: string;
-  class_level: number;
-  location_lat?: number;
-  location_lon?: number;
-}
+const getIconForType = (type: string) => {
+  switch (type) {
+    case 'office': return Building;
+    case 'lab': return BookOpen;
+    case 'classroom': return Users;
+    case 'facility': return Coffee;
+    case 'tech': return Wifi;
+    default: return MapPin;
+  }
+};
 
-interface SelectedItem {
-  id: string;
-  type: 'faculty' | 'course';
-  data: FacultyMember | Course;
-}
+const locationTypes = {
+  office: { label: 'Ofis', color: 'bg-primary text-primary-foreground' },
+  lab: { label: 'Laboratuvar', color: 'bg-accent text-accent-foreground' },
+  classroom: { label: 'Derslik', color: 'bg-secondary text-secondary-foreground' },
+  facility: { label: 'Tesis', color: 'bg-muted text-muted-foreground' },
+  tech: { label: 'Teknoloji', color: 'bg-destructive/80 text-destructive-foreground' }
+};
+
+const getLocationTypeConfig = (type: string) => {
+  return locationTypes[type as keyof typeof locationTypes] || {
+    label: 'Diğer',
+    color: 'bg-muted text-muted-foreground'
+  };
+};
 
 export default function MapPage() {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<OLMap | null>(null);
-  const [facultyMembers, setFacultyMembers] = useState<FacultyMember[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<string>('all');
+  const [markers, setMarkers] = useState<Marker[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedItem, setSelectedItem] = useState<SelectedItem | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const mapContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    document.title = "Kampüs Haritası";
-    initializeMap();
-    fetchData();
+    fetchMarkers();
   }, []);
 
-  const initializeMap = async () => {
-    if (!mapRef.current) return;
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      const newZoom = Math.max(1, Math.min(3, zoom + delta));
+      setZoom(newZoom);
+      
+      // Reset pan when zoom is at minimum (1x) to center the image
+      if (newZoom === 1) {
+        setPan({ x: 0, y: 0 });
+      }
+    };
 
-    const map = new OLMap({
-      target: mapRef.current,
-      layers: [
-        new TileLayer({
-          source: new OSMSource(),
-        }),
-      ],
-      view: new View({
-        center: fromLonLat([27.1815, 38.3850]), // Campus center coordinates
-        zoom: 17,
-      }),
-    });
+    const mapContainer = mapContainerRef.current;
+    if (mapContainer) {
+      mapContainer.addEventListener('wheel', handleWheel, { passive: false });
+      return () => mapContainer.removeEventListener('wheel', handleWheel);
+    }
+  }, [zoom]);
 
-    mapInstanceRef.current = map;
-
-    // Load and display OSM data
-    await loadOSMData(map);
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
   };
 
-  const loadOSMData = async (map: OLMap) => {
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || zoom === 1) return; // Don't pan when zoom is 1x
+    e.preventDefault();
+    setPan({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  const fetchMarkers = async () => {
     try {
-      // First try to load the OSM file if it exists
-      let osmLoaded = false;
-      
-      try {
-        const response = await fetch('/map.osm');
-        if (response.ok) {
-          const osmText = await response.text();
-          await parseOSMData(map, osmText);
-          osmLoaded = true;
-        }
-      } catch (error) {
-        console.log('OSM dosyası bulunamadı, alternatif veri yükleniyor...');
-      }
+      const { data, error } = await supabase
+        .from('markers')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
 
-      // If OSM file is not available, load sample campus data
-      if (!osmLoaded) {
-        await loadSampleCampusData(map);
-      }
-
+      if (error) throw error;
+      setMarkers(data || []);
     } catch (error) {
-      console.error('Error loading map data:', error);
-      // Load fallback data
-      await loadSampleCampusData(map);
-    }
-  };
-
-  const parseOSMData = async (map: OLMap, osmText: string) => {
-    // Parse OSM XML data manually
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(osmText, 'text/xml');
-    
-    // Extract nodes (points) from OSM data
-    const nodes = xmlDoc.getElementsByTagName('node');
-    const nodeMap: Map<string, { lat: number, lon: number, tags: Record<string, string> }> = new Map();
-    
-    // Build node lookup map
-    for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i];
-      const id = node.getAttribute('id') || '';
-      const lat = parseFloat(node.getAttribute('lat') || '0');
-      const lon = parseFloat(node.getAttribute('lon') || '0');
-      
-      const tags: Record<string, string> = {};
-      const tagElements = node.getElementsByTagName('tag');
-      for (let j = 0; j < tagElements.length; j++) {
-        const tag = tagElements[j];
-        const key = tag.getAttribute('k') || '';
-        const value = tag.getAttribute('v') || '';
-        tags[key] = value;
-      }
-      
-      nodeMap.set(id, { lat, lon, tags });
-    }
-
-    // Create vector layer for OSM data
-    const osmVectorSource = new VectorSource();
-
-    // Add node features to map
-    nodeMap.forEach((nodeData, nodeId) => {
-      // Only show nodes with interesting tags (buildings, amenities, etc.)
-      const interestingTags = ['building', 'amenity', 'shop', 'office', 'name'];
-      const hasInterestingTag = interestingTags.some(tag => nodeData.tags[tag]);
-      
-      if (hasInterestingTag || nodeData.tags.name) {
-        const feature = new Feature({
-          geometry: new Point(fromLonLat([nodeData.lon, nodeData.lat])),
-          data: { 
-            id: nodeId, 
-            type: 'osm_node',
-            ...nodeData.tags
-          }
-        });
-
-        let fillColor = '#319FDB';
-        let strokeColor = '#ffffff';
-        
-        // Color code by type
-        if (nodeData.tags.building) {
-          fillColor = '#8B5CF6'; // Purple for buildings
-        } else if (nodeData.tags.amenity) {
-          fillColor = '#10B981'; // Green for amenities
-        } else if (nodeData.tags.office) {
-          fillColor = '#F59E0B'; // Yellow for offices
-        }
-
-        feature.setStyle(new Style({
-          image: new Icon({
-            anchor: [0.5, 0.5],
-            src: "data:image/svg+xml;base64," + btoa(`
-              <svg width="12" height="12" viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="6" cy="6" r="5" fill="${fillColor}" stroke="${strokeColor}" stroke-width="2"/>
-              </svg>
-            `),
-          })
-        }));
-
-        osmVectorSource.addFeature(feature);
-      }
-    });
-
-    const osmVectorLayer = new VectorLayer({
-      source: osmVectorSource,
-    });
-
-    // Add the OSM layer to the map
-    map.addLayer(osmVectorLayer);
-
-    // Fit view to OSM data extent if features exist
-    const features = osmVectorSource.getFeatures();
-    if (features.length > 0) {
-      const extent = osmVectorSource.getExtent();
-      map.getView().fit(extent, { 
-        padding: [50, 50, 50, 50],
-        maxZoom: 18
-      });
-    }
-
-    console.log('OSM verisi başarıyla yüklendi:', features.length, 'öğe');
-  };
-
-  const loadSampleCampusData = async (map: OLMap) => {
-    // Sample campus buildings and locations for DEU
-    const campusLocations = [
-      {
-        id: 'main_building',
-        name: 'Ana Bina',
-        type: 'building',
-        lat: 38.3850,
-        lon: 27.1815,
-        description: 'Rektörlük ve Ana İdari Bina'
-      },
-      {
-        id: 'engineering_faculty',
-        name: 'Mühendislik Fakültesi',
-        type: 'building',
-        lat: 38.3845,
-        lon: 27.1820,
-        description: 'Mühendislik Fakültesi Binası'
-      },
-      {
-        id: 'library',
-        name: 'Kütüphane',
-        type: 'amenity',
-        lat: 38.3855,
-        lon: 27.1810,
-        description: 'Merkez Kütüphane'
-      },
-      {
-        id: 'cafeteria',
-        name: 'Kafeterya',
-        type: 'amenity',
-        lat: 38.3848,
-        lon: 27.1825,
-        description: 'Öğrenci Kafeteryası'
-      },
-      {
-        id: 'computer_lab',
-        name: 'Bilgisayar Laboratuvarı',
-        type: 'office',
-        lat: 38.3852,
-        lon: 27.1818,
-        description: 'YBS Bilgisayar Laboratuvarı'
-      },
-      {
-        id: 'sports_center',
-        name: 'Spor Merkezi',
-        type: 'amenity',
-        lat: 38.3840,
-        lon: 27.1830,
-        description: 'Öğrenci Spor Merkezi'
-      }
-    ];
-
-    const campusVectorSource = new VectorSource();
-
-    campusLocations.forEach((location) => {
-      const feature = new Feature({
-        geometry: new Point(fromLonLat([location.lon, location.lat])),
-        data: { 
-          id: location.id, 
-          type: 'campus_location',
-          name: location.name,
-          description: location.description,
-          category: location.type
-        }
-      });
-
-      let fillColor = '#319FDB';
-      
-      // Color code by type
-      if (location.type === 'building') {
-        fillColor = '#8B5CF6'; // Purple for buildings
-      } else if (location.type === 'amenity') {
-        fillColor = '#10B981'; // Green for amenities
-      } else if (location.type === 'office') {
-        fillColor = '#F59E0B'; // Yellow for offices
-      }
-
-      feature.setStyle(new Style({
-        image: new Icon({
-          anchor: [0.5, 0.5],
-          src: "data:image/svg+xml;base64," + btoa(`
-            <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="8" cy="8" r="7" fill="${fillColor}" stroke="#ffffff" stroke-width="2"/>
-              <text x="8" y="12" text-anchor="middle" fill="white" font-size="8" font-weight="bold">
-                ${location.type === 'building' ? '🏢' : location.type === 'amenity' ? '🏛️' : '💼'}
-              </text>
-            </svg>
-          `),
-        })
-      }));
-
-      campusVectorSource.addFeature(feature);
-    });
-
-    const campusVectorLayer = new VectorLayer({
-      source: campusVectorSource,
-    });
-
-    // Add the campus layer to the map
-    map.addLayer(campusVectorLayer);
-
-    // Fit view to campus data
-    const extent = campusVectorSource.getExtent();
-    map.getView().fit(extent, { 
-      padding: [100, 100, 100, 100],
-      maxZoom: 17
-    });
-
-    console.log('Örnek kampüs verisi yüklendi:', campusLocations.length, 'lokasyon');
-  };
-
-  const fetchData = async () => {
-    try {
-      // Fetch faculty members
-      const { data: facultyData, error: facultyError } = await supabase
-        .rpc("get_public_faculty_members") as { data: FacultyMember[] | null, error: any };
-
-      if (facultyError) throw facultyError;
-
-      // Fetch courses
-      const { data: coursesData, error: coursesError } = await supabase
-        .from("courses")
-        .select("*")
-        .order("course_name");
-
-      if (coursesError) throw coursesError;
-
-      setFacultyMembers(facultyData || []);
-      setCourses(coursesData || []);
-      
-      // Add markers to map
-      addMarkersToMap(facultyData || [], coursesData || []);
-    } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error('Markerlar yüklenemedi:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const addMarkersToMap = (faculty: FacultyMember[], courseList: Course[]) => {
-    if (!mapInstanceRef.current) return;
-
-    const vectorSource = new VectorSource();
-
-    // Add faculty markers
-    faculty.forEach((member) => {
-      if (member.location_lat && member.location_lon) {
-        const feature = new Feature({
-          geometry: new Point(fromLonLat([member.location_lon, member.location_lat])),
-          data: { ...member, type: 'faculty' },
-        });
-
-        feature.setStyle(
-          new Style({
-            image: new Icon({
-              anchor: [0.5, 1],
-              src: "data:image/svg+xml;base64," + btoa(`
-                <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="16" cy="16" r="12" fill="#3b82f6" stroke="white" stroke-width="2"/>
-                  <text x="16" y="20" text-anchor="middle" fill="white" font-size="14">👨‍🏫</text>
-                </svg>
-              `),
-            }),
-          })
-        );
-
-        vectorSource.addFeature(feature);
-      }
-    });
-
-    // Add course/room markers
-    const rooms = new Set<string>();
-    courseList.forEach((course) => {
-      if (course.location_lat && course.location_lon && !rooms.has(course.room)) {
-        rooms.add(course.room);
-        
-        const feature = new Feature({
-          geometry: new Point(fromLonLat([course.location_lon, course.location_lat])),
-          data: { ...course, type: 'course' },
-        });
-
-        feature.setStyle(
-          new Style({
-            image: new Icon({
-              anchor: [0.5, 1],
-              src: "data:image/svg+xml;base64," + btoa(`
-                <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="16" cy="16" r="12" fill="#10b981" stroke="white" stroke-width="2"/>
-                  <text x="16" y="20" text-anchor="middle" fill="white" font-size="14">🏫</text>
-                </svg>
-              `),
-            }),
-          })
-        );
-
-        vectorSource.addFeature(feature);
-      }
-    });
-
-    const vectorLayer = new VectorLayer({
-      source: vectorSource,
-    });
-
-    mapInstanceRef.current.addLayer(vectorLayer);
-
-    // Add click handler
-    mapInstanceRef.current.on("click", (event) => {
-      const features = mapInstanceRef.current!.getFeaturesAtPixel(event.pixel);
-      if (features.length > 0) {
-        const feature = features[0];
-        const data = feature.get("data");
-        setSelectedItem({ id: data.id, type: data.type, data });
-      }
-    });
-  };
-
-  const handleItemClick = (item: FacultyMember | Course, type: 'faculty' | 'course') => {
-    setSelectedItem({ id: item.id, type, data: item });
-    
-    if (item.location_lat && item.location_lon) {
-      mapInstanceRef.current?.getView().animate({
-        center: fromLonLat([item.location_lon, item.location_lat]),
-        zoom: 19,
-        duration: 1000,
-      });
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">Harita yükleniyor...</div>
-      </div>
-    );
-  }
+  const filteredLocations = filterType === 'all' 
+    ? markers 
+    : markers.filter(marker => marker.type === filterType);
 
   return (
-    <div className="min-h-screen flex">
-      {/* Map Container */}
-      <div className="flex-1 relative">
-        <div 
-          ref={mapRef} 
-          className="w-full h-screen"
-          style={{ minHeight: "100vh" }}
-        />
-        
-        {/* Map Title Overlay */}
-        <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm rounded-lg p-4 shadow-lg">
-          <h1 className="text-2xl font-bold text-primary mb-1">Kampüs Haritası</h1>
-          <p className="text-sm text-muted-foreground">
-            Öğretim üyeleri ve derslik konumları
+    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-primary mb-4">Kampüs Haritası</h1>
+          <p className="text-xl text-muted-foreground">
+            YBS Bölümü ve kampüs içi konum bilgileri
           </p>
         </div>
 
-        {/* Legend */}
-        <div className="absolute bottom-4 left-4 bg-background/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center text-xs">👨‍🏫</div>
-              <span className="text-sm">Öğretim Üyeleri</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center text-xs">🏫</div>
-              <span className="text-sm">Derslikler</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Sidebar */}
-      <div className="w-96 bg-background border-l border-border overflow-hidden flex flex-col">
-        <div className="p-4 border-b border-border">
-          <h2 className="text-lg font-semibold">Konum Bilgileri</h2>
-          <p className="text-sm text-muted-foreground">
-            Haritadaki öğelerle etkileşim kurun
-          </p>
+        {/* Filters */}
+        <div className="flex flex-wrap justify-center gap-2 mb-8">
+          <Button
+            variant={filterType === 'all' ? 'default' : 'outline'}
+            onClick={() => setFilterType('all')}
+            className="text-lg px-6 py-3"
+          >
+            Tümü
+          </Button>
+          {Object.entries(locationTypes).map(([type, config]) => (
+            <Button
+              key={type}
+              variant={filterType === type ? 'default' : 'outline'}
+              onClick={() => setFilterType(type)}
+              className="text-lg px-6 py-3"
+            >
+              {config.label}
+            </Button>
+          ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          <Tabs defaultValue="faculty" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 m-4 mb-0">
-              <TabsTrigger value="faculty">Öğretim Üyeleri</TabsTrigger>
-              <TabsTrigger value="courses">Derslikler</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="faculty" className="p-4 pt-2">
-              <div className="space-y-3">
-                {facultyMembers.map((member) => (
-                  <Card 
-                    key={member.id} 
-                    className={`cursor-pointer transition-colors hover:bg-muted/50 ${
-                      selectedItem?.data.id === member.id ? 'ring-2 ring-primary' : ''
-                    }`}
-                    onClick={() => handleItemClick(member, 'faculty')}
-                  >
-                    <CardContent className="p-3">
-                      <div className="flex items-start gap-3">
-                        {member.image_url && (
-                          <div className="w-10 h-10 rounded-full overflow-hidden bg-muted flex-shrink-0">
-                            <img
-                              src={member.image_url}
-                              alt={member.name}
-                              className="w-full h-full object-cover"
-                            />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Interactive Map */}
+          <div className="lg:col-span-2">
+            <Card className="p-6">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-2xl text-primary">İnteraktif Harita</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div 
+                  ref={mapContainerRef}
+                  className={cn(
+                    "relative aspect-[4/3] rounded-xl overflow-hidden shadow-lg select-none",
+                    isDragging && zoom > 1 ? "cursor-grabbing" : zoom > 1 ? "cursor-grab" : "cursor-default"
+                  )}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseLeave}
+                >
+                  {/* Map Background Image */}
+                  <img 
+                    src="/maps.png" 
+                    alt="Kampüs Haritası" 
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-150 select-none pointer-events-none"
+                    style={{ 
+                      transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+                      transformOrigin: 'center center'
+                    }}
+                    draggable={false}
+                  />
+                  {/* Overlay for better marker visibility */}
+                  <div className="absolute inset-0 bg-black/10" />
+                  
+                  {/* Location Pins */}
+                  {loading ? (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-muted-foreground">Markerlar yükleniyor...</div>
+                    </div>
+                  ) : (
+                    filteredLocations.map((marker) => {
+                      const Icon = getIconForType(marker.type);
+                      const isSelected = selectedLocation === marker.id;
+                      
+                      return (
+                        <button
+                          key={marker.id}
+                          className={cn(
+                            "absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-200 z-10",
+                            "hover:scale-110 focus:scale-110 focus:outline-none",
+                            isSelected ? "scale-125 z-20" : ""
+                          )}
+                          style={{ 
+                            left: `${marker.x_position}%`, 
+                            top: `${marker.y_position}%`,
+                            transform: `translate(-50%, -50%) scale(${1/zoom})`,
+                            pointerEvents: 'auto'
+                          }}
+                          onClick={() => setSelectedLocation(marker.id)}
+                        >
+                          <div 
+                            className="w-12 h-12 rounded-full shadow-lg flex items-center justify-center border-2 border-white"
+                            style={{ backgroundColor: marker.color }}
+                          >
+                            <Icon className="w-6 h-6 text-white" />
                           </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-sm truncate">{member.name}</h4>
-                          <p className="text-xs text-muted-foreground truncate">{member.title}</p>
-                          <p className="text-xs text-muted-foreground truncate">{member.department}</p>
-                          {member.office && (
-                            <div className="flex items-center gap-1 mt-1">
-                              <MapPin className="w-3 h-3" />
-                              <span className="text-xs">{member.office}</span>
+                          
+                          {isSelected && (
+                            <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 bg-card border border-border rounded-lg p-2 shadow-lg min-w-[200px] z-30 ring-4 ring-primary/50">
+                              <p className="font-semibold text-sm text-primary">{marker.name}</p>
+                              {marker.description && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {marker.description}
+                                </p>
+                              )}
                             </div>
                           )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="courses" className="p-4 pt-2">
-              <div className="space-y-3">
-                {Array.from(new Set(courses.map(c => c.room))).map((room) => {
-                  const roomCourses = courses.filter(c => c.room === room);
-                  const firstCourse = roomCourses[0];
+                        </button>
+                      );
+                    })
+                  )}
                   
-                  return (
-                    <Card 
-                      key={room}
-                      className={`cursor-pointer transition-colors hover:bg-muted/50 ${
-                        selectedItem?.type === 'course' && (selectedItem.data as Course).room === room ? 'ring-2 ring-primary' : ''
-                      }`}
-                      onClick={() => handleItemClick(firstCourse, 'course')}
-                    >
-                      <CardContent className="p-3">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center flex-shrink-0">
-                            <Building className="w-5 h-5 text-green-600 dark:text-green-400" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-sm">{room}</h4>
-                            <p className="text-xs text-muted-foreground">
-                              {roomCourses.length} ders
-                            </p>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {roomCourses.slice(0, 2).map((course) => (
-                                <Badge key={course.id} variant="secondary" className="text-xs">
-                                  {course.course_code}
+                  {/* Floor Labels */}
+                  <div className="absolute bottom-4 left-4 space-y-1">
+                    <Badge variant="outline" className="bg-card/80">3. Kat - Ofisler</Badge>
+                    <Badge variant="outline" className="bg-card/80">2. Kat - Laboratuvarlar</Badge>
+                    <Badge variant="outline" className="bg-card/80">1. Kat - Derslikler</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Location List */}
+          <div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl text-primary">Konum Listesi</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="max-h-96 overflow-y-auto">
+                  {loading ? (
+                    <div className="p-4 text-center text-muted-foreground">
+                      Markerlar yükleniyor...
+                    </div>
+                  ) : filteredLocations.length > 0 ? (
+                    filteredLocations.map((marker) => {
+                      const Icon = getIconForType(marker.type);
+                      const isSelected = selectedLocation === marker.id;
+                      
+                      return (
+                        <button
+                          key={marker.id}
+                          className={cn(
+                            "w-full p-4 border-b border-border hover:bg-muted/50 text-left transition-colors",
+                            isSelected ? "bg-primary/10 border-primary/20" : ""
+                          )}
+                          onClick={() => setSelectedLocation(marker.id)}
+                        >
+                          <div className="flex items-start space-x-3">
+                            <div 
+                              className="w-10 h-10 rounded-lg flex items-center justify-center"
+                              style={{ backgroundColor: marker.color }}
+                            >
+                              <Icon className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-sm text-foreground truncate">
+                                {marker.name}
+                              </h4>
+                              <div className="flex items-center space-x-2 mt-1">
+                                <Badge 
+                                  variant="secondary" 
+                                  className="text-xs"
+                                >
+                                  {locationTypes[marker.type as keyof typeof locationTypes]?.label || 'Diğer'}
                                 </Badge>
-                              ))}
-                              {roomCourses.length > 2 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{roomCourses.length - 2}
-                                </Badge>
+                              </div>
+                              {marker.description && (
+                                <p className="text-xs text-muted-foreground mt-1 truncate">
+                                  {marker.description}
+                                </p>
                               )}
                             </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* Selected Item Details */}
-        {selectedItem && (
-          <div className="border-t border-border p-4 bg-muted/20">
-            <h3 className="font-semibold text-sm mb-2">Seçili Öğe</h3>
-            {selectedItem.type === 'faculty' ? (
-              <div className="space-y-2">
-                <h4 className="font-medium">{(selectedItem.data as FacultyMember).name}</h4>
-                <p className="text-sm text-muted-foreground">{(selectedItem.data as FacultyMember).title}</p>
-                <p className="text-sm text-muted-foreground">{(selectedItem.data as FacultyMember).department}</p>
-                {(selectedItem.data as FacultyMember).office && (
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    <span className="text-sm">{(selectedItem.data as FacultyMember).office}</span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <h4 className="font-medium">{(selectedItem.data as Course).room}</h4>
-                <div className="space-y-1">
-                  {courses
-                    .filter(c => c.room === (selectedItem.data as Course).room)
-                    .slice(0, 3)
-                    .map((course) => (
-                      <div key={course.id} className="text-xs text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-3 h-3" />
-                          <span>{course.course_name} - {course.day_of_week} {course.start_time}</span>
-                        </div>
-                      </div>
-                    ))
-                  }
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="p-4 text-center text-muted-foreground">
+                      {filterType === 'all' ? 'Henüz marker eklenmemiş.' : 'Bu kategoride marker bulunamadı.'}
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 gap-4 mt-6">
+              <Card className="text-center p-4">
+                <Building className="w-8 h-8 text-primary mx-auto mb-2" />
+                <div className="text-xl font-bold text-primary">3</div>
+                <div className="text-xs text-muted-foreground">Kat</div>
+              </Card>
+              <Card className="text-center p-4">
+                <MapPin className="w-8 h-8 text-accent mx-auto mb-2" />
+                <div className="text-xl font-bold text-accent">{markers.length}</div>
+                <div className="text-xs text-muted-foreground">Konum</div>
+              </Card>
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
 }
-
-

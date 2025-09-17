@@ -5,6 +5,8 @@ import { SurveysManager } from '@/components/admin/SurveysManager';
 import { FacultyManager } from '@/components/admin/FacultyManager';
 import { ScheduleManager } from '@/components/admin/ScheduleManager';
 import FrameManager from '@/components/admin/FrameManager';
+import SavedPhotosManager from '@/components/admin/SavedPhotosManager';
+import MapManager from '@/components/admin/MapManager';
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState('announcements');
@@ -18,12 +20,14 @@ const AdminPage = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="announcements">Duyurular</TabsTrigger>
             <TabsTrigger value="surveys">Anketler</TabsTrigger>
             <TabsTrigger value="faculty">Öğretim Üyeleri</TabsTrigger>
             <TabsTrigger value="schedule">Ders Programı</TabsTrigger>
             <TabsTrigger value="frames">Çerçeveler</TabsTrigger>
+            <TabsTrigger value="photos">Fotoğraflar</TabsTrigger>
+            <TabsTrigger value="map">Harita</TabsTrigger>
           </TabsList>
 
           <TabsContent value="announcements" className="space-y-4">
@@ -44,6 +48,14 @@ const AdminPage = () => {
 
           <TabsContent value="frames" className="space-y-4">
             <FrameManager />
+          </TabsContent>
+
+          <TabsContent value="photos" className="space-y-4">
+            <SavedPhotosManager />
+          </TabsContent>
+
+          <TabsContent value="map" className="space-y-4">
+            <MapManager />
           </TabsContent>
         </Tabs>
       </div>
