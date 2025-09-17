@@ -212,7 +212,7 @@ export default function MapPage() {
                   <img 
                     src="/maps.png" 
                     alt="Kampüs Haritası" 
-                    className="absolute inset-0 w-full h-full object-contain transition-transform duration-150 select-none pointer-events-none"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-150 select-none pointer-events-none"
                     style={{ 
                       transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
                       transformOrigin: 'center center'
