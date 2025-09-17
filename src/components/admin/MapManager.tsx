@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Edit, Plus, MapPin } from 'lucide-react';
+import { Trash2, Edit, Plus, MapPin, Bookmark } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +22,7 @@ interface Marker {
   latitude?: number;
   longitude?: number;
   color: string;
+  size?: number;
   is_active: boolean;
   created_at: string;
 }
@@ -35,6 +36,7 @@ interface FormData {
   latitude: number | null;
   longitude: number | null;
   color: string;
+  size: number;
   is_active: boolean;
 }
 
@@ -64,6 +66,7 @@ export default function MapManager() {
     latitude: null,
     longitude: null,
     color: '#6B7280',
+    size: 24,
     is_active: true,
   });
   const [loading, setLoading] = useState(false);
@@ -145,6 +148,7 @@ export default function MapManager() {
         latitude: formData.latitude,
         longitude: formData.longitude,
         color: formData.color,
+        size: formData.size,
         is_active: formData.is_active,
         created_by: (await supabase.auth.getUser()).data.user?.id || '',
       };
@@ -187,6 +191,7 @@ export default function MapManager() {
       latitude: marker.latitude,
       longitude: marker.longitude,
       color: marker.color,
+      size: marker.size || 24,
       is_active: marker.is_active,
     });
     setIsDialogOpen(true);
@@ -219,6 +224,7 @@ export default function MapManager() {
       latitude: null,
       longitude: null,
       color: '#6B7280',
+      size: 24,
       is_active: true,
     });
     setEditingId(null);
@@ -260,7 +266,7 @@ export default function MapManager() {
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="name">Marker Adı</Label>
                   <Input
@@ -279,6 +285,18 @@ export default function MapManager() {
                     value={formData.color}
                     onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
                     className="h-10 w-full cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="size">Marker Boyutu (px)</Label>
+                  <Input
+                    id="size"
+                    type="number"
+                    min="16"
+                    max="64"
+                    value={formData.size}
+                    onChange={(e) => setFormData(prev => ({ ...prev, size: parseInt(e.target.value) || 24 }))}
                   />
                 </div>
               </div>
@@ -369,12 +387,15 @@ export default function MapManager() {
                       pointerEvents: 'none'
                     }}
                   >
-                    <div 
-                      className="w-8 h-8 rounded-full shadow-lg flex items-center justify-center border-2 border-white ring-2 ring-primary/50"
-                      style={{ backgroundColor: formData.color }}
-                    >
-                      <MapPin className="w-4 h-4 text-white" />
-                    </div>
+                    <Bookmark 
+                      className="drop-shadow-lg ring-2 ring-primary/50 rounded"
+                      style={{ 
+                        width: `${formData.size}px`, 
+                        height: `${formData.size}px`,
+                        color: formData.color,
+                        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+                      }}
+                    />
                   </div>
                   
                   {mapClickMode && (
@@ -488,14 +509,15 @@ export default function MapManager() {
             <CardContent>
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
-                  <div 
-                    className="w-6 h-6 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: marker.color }}
-                  >
-                    <MapPin className="w-3 h-3 text-white" />
-                  </div>
+                  <Bookmark 
+                    className="w-6 h-6"
+                    style={{ color: marker.color }}
+                  />
                   <span className="text-sm font-medium">
                     {markerTypes[marker.type as keyof typeof markerTypes]?.label || 'Diğer'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    ({marker.size || 24}px)
                   </span>
                 </div>
                 

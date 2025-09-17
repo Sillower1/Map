@@ -11,7 +11,8 @@ import {
   Car, 
   Wifi, 
   Printer,
-  Building
+  Building,
+  Bookmark
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -23,18 +24,13 @@ interface Marker {
   x_position: number;
   y_position: number;
   color: string;
+  size?: number;
   is_active: boolean;
 }
 
 const getIconForType = (type: string) => {
-  switch (type) {
-    case 'office': return Building;
-    case 'lab': return BookOpen;
-    case 'classroom': return Users;
-    case 'facility': return Coffee;
-    case 'tech': return Wifi;
-    default: return MapPin;
-  }
+  // Always return Bookmark icon regardless of type
+  return Bookmark;
 };
 
 const locationTypes = {
@@ -196,38 +192,42 @@ export default function MapPage() {
                   {/* Overlay for better marker visibility */}
                   <div className="absolute inset-0 bg-black/10" />
                   
-                  {/* Location Pins */}
-                  {loading ? (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-muted-foreground">Markerlar yükleniyor...</div>
-                    </div>
-                  ) : (
-                    filteredLocations.map((marker) => {
-                      const Icon = getIconForType(marker.type);
-                      const isSelected = selectedLocation === marker.id;
-                      
-                      return (
-                        <button
-                          key={marker.id}
-                          className={cn(
-                            "absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-200 z-10",
-                            "hover:scale-110 focus:scale-110 focus:outline-none",
-                            isSelected ? "scale-125 z-20" : ""
-                          )}
-                          style={{ 
-                            left: `${marker.x_position}%`, 
-                            top: `${marker.y_position}%`,
-                            transform: `translate(-50%, -50%) scale(${1/zoom})`,
-                            pointerEvents: 'auto'
-                          }}
-                          onClick={() => setSelectedLocation(marker.id)}
-                        >
-                          <div 
-                            className="w-12 h-12 rounded-full shadow-lg flex items-center justify-center border-2 border-white"
-                            style={{ backgroundColor: marker.color }}
-                          >
-                            <Icon className="w-6 h-6 text-white" />
-                          </div>
+                   {/* Location Pins */}
+                   {loading ? (
+                     <div className="absolute inset-0 flex items-center justify-center">
+                       <div className="text-muted-foreground">Markerlar yükleniyor...</div>
+                     </div>
+                   ) : (
+                     filteredLocations.map((marker) => {
+                       const Icon = getIconForType(marker.type);
+                       const isSelected = selectedLocation === marker.id;
+                       const markerSize = marker.size || 24;
+                       
+                       return (
+                         <button
+                           key={marker.id}
+                           className={cn(
+                             "absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-200 z-10",
+                             "hover:scale-110 focus:scale-110 focus:outline-none",
+                             isSelected ? "scale-125 z-20" : ""
+                           )}
+                           style={{ 
+                             left: `${marker.x_position}%`, 
+                             top: `${marker.y_position}%`,
+                             transform: `translate(-50%, -50%) scale(${1/zoom})`,
+                             pointerEvents: 'auto'
+                           }}
+                           onClick={() => setSelectedLocation(marker.id)}
+                         >
+                           <Icon 
+                             className="drop-shadow-lg" 
+                             style={{ 
+                               width: `${markerSize}px`, 
+                               height: `${markerSize}px`,
+                               color: marker.color,
+                               filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+                             }}
+                           />
                           
                           {isSelected && (
                             <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 bg-card border border-border rounded-lg p-2 shadow-lg min-w-[200px] z-30 ring-4 ring-primary/50">
@@ -273,21 +273,21 @@ export default function MapPage() {
                       const isSelected = selectedLocation === marker.id;
                       
                       return (
-                        <button
-                          key={marker.id}
-                          className={cn(
-                            "w-full p-4 border-b border-border hover:bg-muted/50 text-left transition-colors",
-                            isSelected ? "bg-primary/10 border-primary/20" : ""
-                          )}
-                          onClick={() => setSelectedLocation(marker.id)}
-                        >
-                          <div className="flex items-start space-x-3">
-                            <div 
-                              className="w-10 h-10 rounded-lg flex items-center justify-center"
-                              style={{ backgroundColor: marker.color }}
-                            >
-                              <Icon className="w-5 h-5 text-white" />
-                            </div>
+                         <button
+                           key={marker.id}
+                           className={cn(
+                             "w-full p-4 border-b border-border hover:bg-muted/50 text-left transition-colors",
+                             isSelected ? "bg-primary/10 border-primary/20" : ""
+                           )}
+                           onClick={() => setSelectedLocation(marker.id)}
+                         >
+                           <div className="flex items-start space-x-3">
+                             <div className="w-10 h-10 flex items-center justify-center">
+                               <Icon 
+                                 className="w-6 h-6" 
+                                 style={{ color: marker.color }}
+                               />
+                             </div>
                             <div className="flex-1 min-w-0">
                               <h4 className="font-medium text-sm text-foreground truncate">
                                 {marker.name}
