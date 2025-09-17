@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Edit, Plus, MapPin } from 'lucide-react';
+import { Trash2, Edit, Plus, MapPin, Users, BookOpen, Coffee, Car, Wifi, Printer, Building } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -25,6 +25,7 @@ interface Marker {
   is_active: boolean;
   created_at: string;
   size?: number;
+  icon?: string | null;
 }
 
 interface FormData {
@@ -38,6 +39,7 @@ interface FormData {
   color: string;
   is_active: boolean;
   size: number;
+  icon: string;
 }
 
 const markerTypes = {
@@ -68,6 +70,7 @@ export default function MapManager() {
     color: '#6B7280',
     is_active: true,
     size: 24,
+    icon: 'map-pin',
   });
   const [loading, setLoading] = useState(false);
   const [mapClickMode, setMapClickMode] = useState(false);
@@ -150,6 +153,7 @@ export default function MapManager() {
         color: formData.color,
         is_active: formData.is_active,
         size: formData.size,
+        icon: formData.icon,
         created_by: (await supabase.auth.getUser()).data.user?.id || '',
       };
 
@@ -193,6 +197,7 @@ export default function MapManager() {
       color: marker.color,
       is_active: marker.is_active,
       size: marker.size || 24,
+      icon: marker.icon || 'map-pin',
     });
     setIsDialogOpen(true);
   };
@@ -301,6 +306,24 @@ export default function MapManager() {
                     onChange={(e) => setFormData(prev => ({ ...prev, size: parseInt(e.target.value) || 24 }))}
                   />
                 </div>
+                <div>
+                  <Label htmlFor="icon">Marker İkonu</Label>
+                  <Select value={formData.icon} onValueChange={(value) => setFormData(prev => ({ ...prev, icon: value }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="map-pin"><div className="flex items-center space-x-2"><MapPin className="w-4 h-4" /> <span>Map Pin</span></div></SelectItem>
+                      <SelectItem value="building"><div className="flex items-center space-x-2"><Building className="w-4 h-4" /> <span>Bina</span></div></SelectItem>
+                      <SelectItem value="users"><div className="flex items-center space-x-2"><Users className="w-4 h-4" /> <span>Kullanıcılar</span></div></SelectItem>
+                      <SelectItem value="book-open"><div className="flex items-center space-x-2"><BookOpen className="w-4 h-4" /> <span>Kitap</span></div></SelectItem>
+                      <SelectItem value="coffee"><div className="flex items-center space-x-2"><Coffee className="w-4 h-4" /> <span>Kafe</span></div></SelectItem>
+                      <SelectItem value="car"><div className="flex items-center space-x-2"><Car className="w-4 h-4" /> <span>Otopark</span></div></SelectItem>
+                      <SelectItem value="wifi"><div className="flex items-center space-x-2"><Wifi className="w-4 h-4" /> <span>Wi‑Fi</span></div></SelectItem>
+                      <SelectItem value="printer"><div className="flex items-center space-x-2"><Printer className="w-4 h-4" /> <span>Yazıcı</span></div></SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -389,14 +412,23 @@ export default function MapManager() {
                       pointerEvents: 'none'
                     }}
                   >
-                  <MapPin 
-                    className="drop-shadow-lg" 
-                      style={{ 
-                        color: formData.color,
-                        width: `${formData.size}px`,
-                        height: `${formData.size}px`
-                      }} 
-                    />
+                    {formData.icon === 'building' ? (
+                      <Building className="drop-shadow-lg" style={{ color: formData.color, width: `${formData.size}px`, height: `${formData.size}px` }} />
+                    ) : formData.icon === 'users' ? (
+                      <Users className="drop-shadow-lg" style={{ color: formData.color, width: `${formData.size}px`, height: `${formData.size}px` }} />
+                    ) : formData.icon === 'book-open' ? (
+                      <BookOpen className="drop-shadow-lg" style={{ color: formData.color, width: `${formData.size}px`, height: `${formData.size}px` }} />
+                    ) : formData.icon === 'coffee' ? (
+                      <Coffee className="drop-shadow-lg" style={{ color: formData.color, width: `${formData.size}px`, height: `${formData.size}px` }} />
+                    ) : formData.icon === 'car' ? (
+                      <Car className="drop-shadow-lg" style={{ color: formData.color, width: `${formData.size}px`, height: `${formData.size}px` }} />
+                    ) : formData.icon === 'wifi' ? (
+                      <Wifi className="drop-shadow-lg" style={{ color: formData.color, width: `${formData.size}px`, height: `${formData.size}px` }} />
+                    ) : formData.icon === 'printer' ? (
+                      <Printer className="drop-shadow-lg" style={{ color: formData.color, width: `${formData.size}px`, height: `${formData.size}px` }} />
+                    ) : (
+                      <MapPin className="drop-shadow-lg" style={{ color: formData.color, width: `${formData.size}px`, height: `${formData.size}px` }} />
+                    )}
                   </div>
                   
                   {mapClickMode && (

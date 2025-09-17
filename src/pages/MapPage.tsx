@@ -25,16 +25,21 @@ interface Marker {
   color: string;
   is_active: boolean;
   size?: number;
+  icon?: string | null;
 }
 
-const getIconForType = (type: string) => {
-  switch (type) {
-    case 'office': return Building;
-    case 'lab': return BookOpen;
-    case 'classroom': return Users;
-    case 'facility': return Coffee;
-    case 'tech': return Wifi;
-    default: return MapPin;
+const getIconByKey = (key?: string | null) => {
+  switch (key) {
+    case 'building': return Building;
+    case 'users': return Users;
+    case 'book-open': return BookOpen;
+    case 'coffee': return Coffee;
+    case 'car': return Car;
+    case 'wifi': return Wifi;
+    case 'printer': return Printer;
+    case 'map-pin':
+    default:
+      return MapPin;
   }
 };
 
@@ -55,6 +60,7 @@ const getLocationTypeConfig = (type: string) => {
 
 export default function MapPage() {
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [sideDetailsId, setSideDetailsId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string>('all');
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -182,6 +188,13 @@ export default function MapPage() {
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
                   onMouseLeave={handleMouseLeave}
+                  onClick={(e) => {
+                    // map boş bir yere tıklandıysa detay panelini kapat
+                    if ((e.target as HTMLElement).closest('button[data-marker]') == null) {
+                      setSelectedLocation(null);
+                      setSideDetailsId(null);
+                    }
+                  }}
                 >
                   {/* Map Background Image */}
                   <img 
@@ -204,12 +217,13 @@ export default function MapPage() {
                     </div>
                   ) : (
                     filteredLocations.map((marker) => {
-                      const Icon = getIconForType(marker.type);
+                      const Icon = getIconByKey(marker.icon);
                       const isSelected = selectedLocation === marker.id;
                       
                       return (
                         <button
                           key={marker.id}
+                          data-marker
                           className={cn(
                             "absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-200 z-10",
                             "hover:scale-110 focus:scale-110 focus:outline-none",
@@ -221,7 +235,11 @@ export default function MapPage() {
                             transform: `translate(-50%, -50%) scale(${1/zoom})`,
                             pointerEvents: 'auto'
                           }}
-                          onClick={() => setSelectedLocation(marker.id)}
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            setSelectedLocation(marker.id);
+                            setSideDetailsId(marker.id);
+                          }}
                         >
                           <Icon 
                             className="drop-shadow-lg" 
@@ -231,17 +249,6 @@ export default function MapPage() {
                               height: `${marker.size || 24}px`
                             }} 
                           />
-                          
-                          {isSelected && (
-                            <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 bg-card border border-border rounded-lg p-2 shadow-lg min-w-[200px] z-30 ring-4 ring-primary/50">
-                              <p className="font-semibold text-sm text-primary">{marker.name}</p>
-                              {marker.description && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {marker.description}
-                                </p>
-                              )}
-                            </div>
-                          )}
                         </button>
                       );
                     })
@@ -258,13 +265,36 @@ export default function MapPage() {
             </Card>
           </div>
 
-          {/* Location List */}
+          {/* Side Details + Location List */}
           <div>
             <Card>
               <CardHeader>
                 <CardTitle className="text-xl text-primary">Konum Listesi</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
+                {sideDetailsId && (
+                  <div className="p-4 border-b border-border bg-card/70">
+                    {(() => {
+                      const m = markers.find(m => m.id === sideDetailsId);
+                      if (!m) return null;
+                      const Icon = getIconByKey(m.icon);
+                      return (
+                        <div className="flex items-start space-x-3">
+                          <Icon style={{ color: m.color, width: `${Math.min(m.size || 24, 32)}px`, height: `${Math.min(m.size || 24, 32)}px` }} />
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between">
+                              <h4 className="font-semibold text-sm text-primary">{m.name}</h4>
+                              <Button size="sm" variant="ghost" onClick={() => { setSelectedLocation(null); setSideDetailsId(null); }}>Kapat</Button>
+                            </div>
+                            {m.description && (
+                              <p className="text-xs text-muted-foreground mt-1">{m.description}</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
                 <div className="max-h-96 overflow-y-auto">
                   {loading ? (
                     <div className="p-4 text-center text-muted-foreground">
@@ -272,7 +302,7 @@ export default function MapPage() {
                     </div>
                   ) : filteredLocations.length > 0 ? (
                     filteredLocations.map((marker) => {
-                      const Icon = getIconForType(marker.type);
+                      const Icon = getIconByKey(marker.icon);
                       const isSelected = selectedLocation === marker.id;
                       
                       return (
@@ -282,7 +312,7 @@ export default function MapPage() {
                             "w-full p-4 border-b border-border hover:bg-muted/50 text-left transition-colors",
                             isSelected ? "bg-primary/10 border-primary/20" : ""
                           )}
-                          onClick={() => setSelectedLocation(marker.id)}
+                          onClick={() => { setSelectedLocation(marker.id); setSideDetailsId(marker.id); }}
                         >
                           <div className="flex items-start space-x-3">
                             <div className="w-10 h-10 flex items-center justify-center">
