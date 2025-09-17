@@ -60,6 +60,7 @@ const getLocationTypeConfig = (type: string) => {
 
 export default function MapPage() {
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [bumpMarkerId, setBumpMarkerId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string>('all');
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,6 +72,19 @@ export default function MapPage() {
 
   useEffect(() => {
     fetchMarkers();
+  }, []);
+
+  // Sayfanın herhangi bir boş yerine tıklamada baloncuğu kapat
+  useEffect(() => {
+    const handleDocClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Marker veya konum listesi içi tıklamaları yoksay
+      if (target.closest('button[data-marker]')) return;
+      if (target.closest('[data-location-list]')) return;
+      setSelectedLocation(null);
+    };
+    document.addEventListener('click', handleDocClick);
+    return () => document.removeEventListener('click', handleDocClick);
   }, []);
 
   useEffect(() => {
@@ -234,7 +248,7 @@ export default function MapPage() {
                           className={cn(
                             "absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-200 z-10",
                             "hover:scale-110 focus:scale-110 focus:outline-none",
-                            isSelected ? "scale-125 z-20" : ""
+                            isSelected ? (bumpMarkerId === marker.id ? "scale-150 z-20" : "scale-125 z-20") : ""
                           )}
                           style={{ 
                             left: `${marker.x_position}%`, 
@@ -245,6 +259,10 @@ export default function MapPage() {
                           onClick={(ev) => {
                             ev.stopPropagation();
                             setSelectedLocation(marker.id);
+                            setBumpMarkerId(marker.id);
+                            setTimeout(() => {
+                              setBumpMarkerId((curr) => (curr === marker.id ? null : curr));
+                            }, 220);
                           }}
                         >
                           <Icon 
@@ -284,7 +302,7 @@ export default function MapPage() {
                 <CardTitle className="text-xl text-primary">Konum Listesi</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="max-h-96 overflow-y-auto">
+                <div className="max-h-96 overflow-y-auto" data-location-list>
                   {loading ? (
                     <div className="p-4 text-center text-muted-foreground">
                       Markerlar yükleniyor...
@@ -301,7 +319,13 @@ export default function MapPage() {
                             "w-full p-4 border-b border-border hover:bg-muted/50 text-left transition-colors",
                             isSelected ? "bg-primary/10 border-primary/20" : ""
                           )}
-                          onClick={() => { setSelectedLocation(marker.id); }}
+                          onClick={() => {
+                            setSelectedLocation(marker.id);
+                            setBumpMarkerId(marker.id);
+                            setTimeout(() => {
+                              setBumpMarkerId((curr) => (curr === marker.id ? null : curr));
+                            }, 220);
+                          }}
                         >
                           <div className="flex items-start space-x-3">
                             <div className="w-10 h-10 flex items-center justify-center">
