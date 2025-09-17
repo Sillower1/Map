@@ -389,8 +389,8 @@ export default function MapManager() {
                       pointerEvents: 'none'
                     }}
                   >
-                    <MapPin 
-                      className="drop-shadow-lg ring-2 ring-primary/50 rounded" 
+                  <MapPin 
+                    className="drop-shadow-lg" 
                       style={{ 
                         color: formData.color,
                         width: `${formData.size}px`,
