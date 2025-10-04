@@ -15,13 +15,19 @@ interface FacultyMember {
   department: string;
   email: string | null;
   phone: string | null;
+  linkedin: string | null;
   office: string | null;
   image_url: string | null;
   education: string | null;
   specialization: string | null;
-  contact_info: string | null;
   category: string | null;
   display_order: number;
+  email_display_order: number | null;
+  phone_display_order: number | null;
+  linkedin_display_order: number | null;
+  office_display_order: number | null;
+  education_display_order: number | null;
+  specialization_display_order: number | null;
 }
 
 export const FacultyManager = () => {
@@ -35,13 +41,19 @@ export const FacultyManager = () => {
     department: "",
     email: "",
     phone: "",
+    linkedin: "",
     office: "",
     image_url: "",
     education: "",
     specialization: "",
-    contact_info: "",
     category: "",
     display_order: 0,
+    email_display_order: 0,
+    phone_display_order: 0,
+    linkedin_display_order: 0,
+    office_display_order: 0,
+    education_display_order: 0,
+    specialization_display_order: 0,
   });
 
   useEffect(() => {
@@ -70,16 +82,24 @@ export const FacultyManager = () => {
     
     try {
       const memberData = {
-        ...formData,
+        name: formData.name,
+        title: formData.title,
+        department: formData.department,
         email: formData.email || null,
         phone: formData.phone || null,
+        linkedin: formData.linkedin || null,
         office: formData.office || null,
         image_url: formData.image_url || null,
         education: formData.education || null,
         specialization: formData.specialization || null,
-        contact_info: formData.contact_info || null,
         category: formData.category || null,
         display_order: formData.display_order || 0,
+        email_display_order: formData.email_display_order || 0,
+        phone_display_order: formData.phone_display_order || 0,
+        linkedin_display_order: formData.linkedin_display_order || 0,
+        office_display_order: formData.office_display_order || 0,
+        education_display_order: formData.education_display_order || 0,
+        specialization_display_order: formData.specialization_display_order || 0,
       };
 
       if (editingId) {
@@ -115,13 +135,19 @@ export const FacultyManager = () => {
       department: member.department,
       email: member.email || "",
       phone: member.phone || "",
+      linkedin: member.linkedin || "",
       office: member.office || "",
       image_url: member.image_url || "",
       education: member.education || "",
       specialization: member.specialization || "",
-      contact_info: member.contact_info || "",
       category: member.category || "",
       display_order: member.display_order || 0,
+      email_display_order: member.email_display_order || 0,
+      phone_display_order: member.phone_display_order || 0,
+      linkedin_display_order: member.linkedin_display_order || 0,
+      office_display_order: member.office_display_order || 0,
+      education_display_order: member.education_display_order || 0,
+      specialization_display_order: member.specialization_display_order || 0,
     });
     setIsDialogOpen(true);
   };
@@ -150,13 +176,19 @@ export const FacultyManager = () => {
       department: "",
       email: "",
       phone: "",
+      linkedin: "",
       office: "",
       image_url: "",
       education: "",
       specialization: "",
-      contact_info: "",
       category: "",
       display_order: 0,
+      email_display_order: 0,
+      phone_display_order: 0,
+      linkedin_display_order: 0,
+      office_display_order: 0,
+      education_display_order: 0,
+      specialization_display_order: 0,
     });
     setEditingId(null);
   };
@@ -243,29 +275,31 @@ export const FacultyManager = () => {
                 />
               </div>
 
-              <div>
-                <Label htmlFor="office">Oda</Label>
-                <Input
-                  id="office"
-                  value={formData.office}
-                  onChange={(e) => setFormData({ ...formData, office: e.target.value })}
-                  placeholder="A-201"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="contact_info">İletişim Bilgileri</Label>
-                <Input
-                  id="contact_info"
-                  value={formData.contact_info}
-                  onChange={(e) => setFormData({ ...formData, contact_info: e.target.value })}
-                  placeholder="E-posta, telefon, ofis saatleri vb."
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="office">Oda</Label>
+                  <Input
+                    id="office"
+                    value={formData.office}
+                    onChange={(e) => setFormData({ ...formData, office: e.target.value })}
+                    placeholder="A-201"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="office_display_order">Oda Sıralama</Label>
+                  <Input
+                    id="office_display_order"
+                    type="number"
+                    value={formData.office_display_order}
+                    onChange={(e) => setFormData({ ...formData, office_display_order: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="email">E-posta (iç kayıt)</Label>
+                  <Label htmlFor="email">E-posta</Label>
                   <Input
                     id="email"
                     type="email"
@@ -275,7 +309,20 @@ export const FacultyManager = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="phone">Telefon (iç kayıt)</Label>
+                  <Label htmlFor="email_display_order">E-posta Sıralama</Label>
+                  <Input
+                    id="email_display_order"
+                    type="number"
+                    value={formData.email_display_order}
+                    onChange={(e) => setFormData({ ...formData, email_display_order: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="phone">Telefon</Label>
                   <Input
                     id="phone"
                     value={formData.phone}
@@ -283,26 +330,83 @@ export const FacultyManager = () => {
                     placeholder="+90 XXX XXX XX XX"
                   />
                 </div>
+                <div>
+                  <Label htmlFor="phone_display_order">Telefon Sıralama</Label>
+                  <Input
+                    id="phone_display_order"
+                    type="number"
+                    value={formData.phone_display_order}
+                    onChange={(e) => setFormData({ ...formData, phone_display_order: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                  />
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="education">Eğitim Geçmişi</Label>
-                <Input
-                  id="education"
-                  value={formData.education}
-                  onChange={(e) => setFormData({ ...formData, education: e.target.value })}
-                  placeholder="Lisans - Üniversite Adı (Yıl)"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="linkedin">LinkedIn</Label>
+                  <Input
+                    id="linkedin"
+                    type="url"
+                    value={formData.linkedin}
+                    onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
+                    placeholder="https://linkedin.com/in/..."
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="linkedin_display_order">LinkedIn Sıralama</Label>
+                  <Input
+                    id="linkedin_display_order"
+                    type="number"
+                    value={formData.linkedin_display_order}
+                    onChange={(e) => setFormData({ ...formData, linkedin_display_order: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                  />
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="specialization">Uzmanlık Alanı</Label>
-                <Input
-                  id="specialization"
-                  value={formData.specialization}
-                  onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-                  placeholder="Veri Bilimi, Yapay Zeka, vb."
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="education">Eğitim Geçmişi</Label>
+                  <Input
+                    id="education"
+                    value={formData.education}
+                    onChange={(e) => setFormData({ ...formData, education: e.target.value })}
+                    placeholder="Lisans - Üniversite Adı (Yıl)"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="education_display_order">Eğitim Sıralama</Label>
+                  <Input
+                    id="education_display_order"
+                    type="number"
+                    value={formData.education_display_order}
+                    onChange={(e) => setFormData({ ...formData, education_display_order: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="specialization">Uzmanlık Alanı</Label>
+                  <Input
+                    id="specialization"
+                    value={formData.specialization}
+                    onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+                    placeholder="Veri Bilimi, Yapay Zeka, vb."
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="specialization_display_order">Uzmanlık Sıralama</Label>
+                  <Input
+                    id="specialization_display_order"
+                    type="number"
+                    value={formData.specialization_display_order}
+                    onChange={(e) => setFormData({ ...formData, specialization_display_order: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                  />
+                </div>
               </div>
 
               <div>

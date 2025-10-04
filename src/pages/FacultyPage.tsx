@@ -7,13 +7,21 @@ interface FacultyMember {
   id: string;
   name: string;
   title: string;
+  email?: string;
+  phone?: string;
+  linkedin?: string;
   office?: string;
   image_url?: string;
   education?: string;
   specialization?: string;
-  contact_info?: string;
   category?: string;
   display_order: number;
+  email_display_order?: number;
+  phone_display_order?: number;
+  linkedin_display_order?: number;
+  office_display_order?: number;
+  education_display_order?: number;
+  specialization_display_order?: number;
 }
 
 const FacultyPage = () => {
@@ -92,35 +100,45 @@ const FacultyPage = () => {
                   
                   <CardContent className="pt-0">
                     <div className="space-y-3">
-                      {member.office && (
-                        <div className="flex items-start gap-2 text-sm">
-                          <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                          <div>
-                            <span className="font-medium">Oda:</span> {member.office}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {member.contact_info && (
-                        <div className="text-sm">
-                          <span className="font-medium">İletişim:</span>
-                          <p className="mt-1 text-muted-foreground">{member.contact_info}</p>
-                        </div>
-                      )}
-                      
-                      {member.education && (
-                        <div className="text-sm">
-                          <span className="font-medium">Eğitim Geçmişi:</span>
-                          <p className="mt-1 text-muted-foreground whitespace-pre-line">{member.education}</p>
-                        </div>
-                      )}
-                      
-                      {member.specialization && (
-                        <div className="text-sm">
-                          <span className="font-medium">Uzmanlık Alanı:</span>
-                          <p className="mt-1 text-muted-foreground">{member.specialization}</p>
-                        </div>
-                      )}
+                      {(() => {
+                        const fields = [
+                          { key: 'office', label: 'Oda', value: member.office, order: member.office_display_order || 0, icon: MapPin },
+                          { key: 'email', label: 'E-posta', value: member.email, order: member.email_display_order || 0 },
+                          { key: 'phone', label: 'Telefon', value: member.phone, order: member.phone_display_order || 0 },
+                          { key: 'linkedin', label: 'LinkedIn', value: member.linkedin, order: member.linkedin_display_order || 0, isLink: true },
+                          { key: 'education', label: 'Eğitim Geçmişi', value: member.education, order: member.education_display_order || 0 },
+                          { key: 'specialization', label: 'Uzmanlık Alanı', value: member.specialization, order: member.specialization_display_order || 0 },
+                        ];
+
+                        return fields
+                          .filter(field => field.value)
+                          .sort((a, b) => a.order - b.order)
+                          .map(field => {
+                            const Icon = field.icon;
+                            return (
+                              <div key={field.key} className="text-sm">
+                                <div className="flex items-start gap-2">
+                                  {Icon && <Icon className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />}
+                                  <div className="flex-1">
+                                    <span className="font-medium">{field.label}:</span>
+                                    {field.isLink ? (
+                                      <a 
+                                        href={field.value} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="ml-1 text-primary hover:underline"
+                                      >
+                                        Profili Görüntüle
+                                      </a>
+                                    ) : (
+                                      <p className="mt-1 text-muted-foreground whitespace-pre-line">{field.value}</p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          });
+                      })()}
                     </div>
                   </CardContent>
                 </Card>
