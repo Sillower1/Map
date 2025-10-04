@@ -7,9 +7,13 @@ interface FacultyMember {
   id: string;
   name: string;
   title: string;
-  department: string;
   office?: string;
   image_url?: string;
+  education?: string;
+  specialization?: string;
+  contact_info?: string;
+  category?: string;
+  display_order: number;
 }
 
 const FacultyPage = () => {
@@ -44,6 +48,18 @@ const FacultyPage = () => {
     );
   }
 
+  // Group faculty members by category
+  const groupedMembers = facultyMembers.reduce((acc, member) => {
+    const category = member.category || "Diğer";
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(member);
+    return acc;
+  }, {} as Record<string, FacultyMember[]>);
+
+  const categories = Object.keys(groupedMembers).sort();
+
   return (
     <div className="container mx-auto px-4 py-8">
       <header className="mb-8">
@@ -51,45 +67,67 @@ const FacultyPage = () => {
         <p className="text-muted-foreground">Fakültemizin değerli öğretim üyelerini tanıyın</p>
       </header>
 
-      <main>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {facultyMembers.map((member) => (
-            <Card key={member.id} className="overflow-hidden">
-              <CardHeader className="pb-4">
-                {member.image_url && (
-                  <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden bg-muted">
-                    <img
-                      src={member.image_url}
-                      alt={`${member.name} fotoğrafı`}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                <CardTitle className="text-center text-lg">{member.name}</CardTitle>
-                <p className="text-center text-sm text-muted-foreground">{member.title}</p>
-              </CardHeader>
-              
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  <div className="text-sm">
-                    <span className="font-medium">Bölüm:</span> {member.department}
-                  </div>
+      <main className="space-y-12">
+        {categories.map((category) => (
+          <section key={category}>
+            <h2 className="text-2xl font-semibold text-foreground mb-6 pb-2 border-b">
+              {category}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {groupedMembers[category].map((member) => (
+                <Card key={member.id} className="overflow-hidden">
+                  <CardHeader className="pb-4">
+                    {member.image_url && (
+                      <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden bg-muted">
+                        <img
+                          src={member.image_url}
+                          alt={`${member.name} fotoğrafı`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <CardTitle className="text-center text-lg">{member.name}</CardTitle>
+                    <p className="text-center text-sm text-muted-foreground">{member.title}</p>
+                  </CardHeader>
                   
-                  {member.office && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <MapPin className="w-4 h-4 text-muted-foreground" />
-                      <span>Ofis: {member.office}</span>
+                  <CardContent className="pt-0">
+                    <div className="space-y-3">
+                      {member.office && (
+                        <div className="flex items-start gap-2 text-sm">
+                          <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                          <div>
+                            <span className="font-medium">Oda:</span> {member.office}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {member.contact_info && (
+                        <div className="text-sm">
+                          <span className="font-medium">İletişim:</span>
+                          <p className="mt-1 text-muted-foreground">{member.contact_info}</p>
+                        </div>
+                      )}
+                      
+                      {member.education && (
+                        <div className="text-sm">
+                          <span className="font-medium">Eğitim Geçmişi:</span>
+                          <p className="mt-1 text-muted-foreground whitespace-pre-line">{member.education}</p>
+                        </div>
+                      )}
+                      
+                      {member.specialization && (
+                        <div className="text-sm">
+                          <span className="font-medium">Uzmanlık Alanı:</span>
+                          <p className="mt-1 text-muted-foreground">{member.specialization}</p>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  
-                  <div className="text-xs text-muted-foreground mt-2 p-2 bg-muted/50 rounded">
-                    İletişim bilgileri için bölüm sekreterliğine başvurunuz.
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </section>
+        ))}
 
         {facultyMembers.length === 0 && (
           <div className="text-center py-12">

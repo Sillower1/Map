@@ -223,6 +223,11 @@ export const SurveysManager = () => {
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.stopPropagation();
+                    }
+                  }}
                   rows={2}
                 />
               </div>

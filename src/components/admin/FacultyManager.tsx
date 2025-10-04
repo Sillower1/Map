@@ -17,6 +17,11 @@ interface FacultyMember {
   phone: string | null;
   office: string | null;
   image_url: string | null;
+  education: string | null;
+  specialization: string | null;
+  contact_info: string | null;
+  category: string | null;
+  display_order: number;
 }
 
 export const FacultyManager = () => {
@@ -32,6 +37,11 @@ export const FacultyManager = () => {
     phone: "",
     office: "",
     image_url: "",
+    education: "",
+    specialization: "",
+    contact_info: "",
+    category: "",
+    display_order: 0,
   });
 
   useEffect(() => {
@@ -43,10 +53,11 @@ export const FacultyManager = () => {
       const { data, error } = await supabase
         .from("faculty_members")
         .select("*")
+        .order("display_order", { ascending: true })
         .order("name", { ascending: true });
 
       if (error) throw error;
-      setFacultyMembers(data || []);
+      setFacultyMembers((data || []) as any);
     } catch (error: any) {
       toast.error("Öğretim üyeleri yüklenemedi: " + error.message);
     } finally {
@@ -64,6 +75,11 @@ export const FacultyManager = () => {
         phone: formData.phone || null,
         office: formData.office || null,
         image_url: formData.image_url || null,
+        education: formData.education || null,
+        specialization: formData.specialization || null,
+        contact_info: formData.contact_info || null,
+        category: formData.category || null,
+        display_order: formData.display_order || 0,
       };
 
       if (editingId) {
@@ -101,6 +117,11 @@ export const FacultyManager = () => {
       phone: member.phone || "",
       office: member.office || "",
       image_url: member.image_url || "",
+      education: member.education || "",
+      specialization: member.specialization || "",
+      contact_info: member.contact_info || "",
+      category: member.category || "",
+      display_order: member.display_order || 0,
     });
     setIsDialogOpen(true);
   };
@@ -131,6 +152,11 @@ export const FacultyManager = () => {
       phone: "",
       office: "",
       image_url: "",
+      education: "",
+      specialization: "",
+      contact_info: "",
+      category: "",
+      display_order: 0,
     });
     setEditingId(null);
   };
@@ -162,10 +188,10 @@ export const FacultyManager = () => {
                 Öğretim üyesi bilgilerini girin ve kaydedin
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="name">Ad Soyad</Label>
+                  <Label htmlFor="name">Ad Soyad *</Label>
                   <Input
                     id="name"
                     value={formData.name}
@@ -174,7 +200,7 @@ export const FacultyManager = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="title">Unvan</Label>
+                  <Label htmlFor="title">Unvan *</Label>
                   <Input
                     id="title"
                     value={formData.title}
@@ -184,18 +210,62 @@ export const FacultyManager = () => {
                   />
                 </div>
               </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="category">Kategori</Label>
+                  <Input
+                    id="category"
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    placeholder="Profesörler, Doçentler, vb."
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="display_order">Sıralama</Label>
+                  <Input
+                    id="display_order"
+                    type="number"
+                    value={formData.display_order}
+                    onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
               <div>
-                <Label htmlFor="department">Bölüm</Label>
+                <Label htmlFor="department">Bölüm (iç kayıt için)</Label>
                 <Input
                   id="department"
                   value={formData.department}
                   onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  required
+                  placeholder="Yönetim Bilişim Sistemleri"
                 />
               </div>
+
+              <div>
+                <Label htmlFor="office">Oda</Label>
+                <Input
+                  id="office"
+                  value={formData.office}
+                  onChange={(e) => setFormData({ ...formData, office: e.target.value })}
+                  placeholder="A-201"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="contact_info">İletişim Bilgileri</Label>
+                <Input
+                  id="contact_info"
+                  value={formData.contact_info}
+                  onChange={(e) => setFormData({ ...formData, contact_info: e.target.value })}
+                  placeholder="E-posta, telefon, ofis saatleri vb."
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="email">E-posta</Label>
+                  <Label htmlFor="email">E-posta (iç kayıt)</Label>
                   <Input
                     id="email"
                     type="email"
@@ -205,7 +275,7 @@ export const FacultyManager = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="phone">Telefon</Label>
+                  <Label htmlFor="phone">Telefon (iç kayıt)</Label>
                   <Input
                     id="phone"
                     value={formData.phone}
@@ -214,27 +284,38 @@ export const FacultyManager = () => {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="office">Ofis</Label>
-                  <Input
-                    id="office"
-                    value={formData.office}
-                    onChange={(e) => setFormData({ ...formData, office: e.target.value })}
-                    placeholder="A-201"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="image_url">Fotoğraf URL</Label>
-                  <Input
-                    id="image_url"
-                    type="url"
-                    value={formData.image_url}
-                    onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                    placeholder="https://..."
-                  />
-                </div>
+
+              <div>
+                <Label htmlFor="education">Eğitim Geçmişi</Label>
+                <Input
+                  id="education"
+                  value={formData.education}
+                  onChange={(e) => setFormData({ ...formData, education: e.target.value })}
+                  placeholder="Lisans - Üniversite Adı (Yıl)"
+                />
               </div>
+
+              <div>
+                <Label htmlFor="specialization">Uzmanlık Alanı</Label>
+                <Input
+                  id="specialization"
+                  value={formData.specialization}
+                  onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+                  placeholder="Veri Bilimi, Yapay Zeka, vb."
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="image_url">Fotoğraf URL</Label>
+                <Input
+                  id="image_url"
+                  type="url"
+                  value={formData.image_url}
+                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                  placeholder="https://..."
+                />
+              </div>
+
               <Button type="submit" className="w-full">
                 {editingId ? "Güncelle" : "Ekle"}
               </Button>

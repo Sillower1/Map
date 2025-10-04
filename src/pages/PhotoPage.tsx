@@ -27,6 +27,8 @@ export default function PhotoPage() {
   const [photoTimer, setPhotoTimer] = useState(0);
   const [isCountingDown, setIsCountingDown] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null);
+  const [frameAspectRatio, setFrameAspectRatio] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   // Countdown timer effect
@@ -94,6 +96,12 @@ export default function PhotoPage() {
         if (playPromise && typeof (playPromise as any).catch === 'function') {
           (playPromise as Promise<void>).catch(() => {});
         }
+        const handleLoadedMetadata = () => {
+          if (video.videoWidth && video.videoHeight) {
+            setVideoAspectRatio(video.videoWidth / video.videoHeight);
+          }
+        };
+        video.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true });
       } catch (e) {
         console.warn('Video oynatma başlatılamadı');
       }
@@ -108,6 +116,26 @@ export default function PhotoPage() {
       }
     };
   }, [stream]);
+
+  // Aktif çerçevenin en-boy oranını ölç
+  useEffect(() => {
+    const current = photoFrames[currentFrame];
+    if (!current || !current.image_url) {
+      setFrameAspectRatio(null);
+      return;
+    }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      if (img.naturalWidth && img.naturalHeight) {
+        setFrameAspectRatio(img.naturalWidth / img.naturalHeight);
+      }
+    };
+    img.onerror = () => setFrameAspectRatio(null);
+    img.src = current.image_url;
+  }, [currentFrame, photoFrames]);
+
+  const displayAspectRatio = frameAspectRatio || videoAspectRatio || 3 / 4;
 
   const startPhotoTimer = () => {
     if (photoTimer === 0) {
@@ -124,10 +152,16 @@ export default function PhotoPage() {
     const context = canvas.getContext('2d');
 
     if (video && context && photoFrames.length > 0) {
-      canvas.width = video.videoWidth || video.clientWidth;
-      canvas.height = video.videoHeight || video.clientHeight;
+      // Daha yüksek çözünürlük için 2x scale
+      const scale = 2;
+      const baseWidth = video.videoWidth || video.clientWidth;
+      const baseHeight = video.videoHeight || video.clientHeight;
+      canvas.width = baseWidth * scale;
+      canvas.height = baseHeight * scale;
 
+      // Video çiziminde aynalama uygula
       if (isMirrored) {
+        context.save();
         context.translate(canvas.width, 0);
         context.scale(-1, 1);
       }
@@ -135,7 +169,12 @@ export default function PhotoPage() {
       // Önce video görüntüsünü çiz
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // Çerçeveyi PNG olarak overlay et
+      // Aynalama varsa geri al
+      if (isMirrored) {
+        context.restore();
+      }
+
+      // Çerçeveyi PNG olarak overlay et (aynalama olmadan)
       await applyFrameOverlay(context, canvas.width, canvas.height);
 
       const photoDataUrl = canvas.toDataURL('image/png');
@@ -162,7 +201,10 @@ export default function PhotoPage() {
       const frameImage = new Image();
       frameImage.crossOrigin = 'anonymous';
       frameImage.onload = () => {
-        // Çerçeve resmini video boyutlarına uyacak şekilde çiz
+        // Yüksek kaliteli çizim için imageSmoothingQuality ayarla
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+        // Çerçeve resmini yüksek çözünürlükte çiz
         context.drawImage(frameImage, 0, 0, width, height);
         resolve();
       };
@@ -188,6 +230,10 @@ export default function PhotoPage() {
   const savePhoto = async () => {
     if (previewImage && photoFrames.length > 0) {
       try {
+        // Tüm fotoğraflar 5 dakika sonra silinecek
+        const expiresAt = new Date();
+        expiresAt.setMinutes(expiresAt.getMinutes() + 5);
+        
         const { error } = await supabase
           .from('saved_photos')
           .insert({
@@ -246,67 +292,74 @@ export default function PhotoPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background p-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="h-screen bg-gradient-to-br from-background via-secondary/20 to-background overflow-hidden flex flex-col p-2">
+      <div className="max-w-6xl mx-auto w-full h-full flex flex-col">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary mb-4">Hatıra Fotoğrafı</h1>
-          <p className="text-xl text-muted-foreground">
+        <div className="text-center mb-1 flex-shrink-0">
+          <h1 className="text-lg font-bold text-primary mb-0.5">Hatıra Fotoğrafı</h1>
+          <p className="text-[10px] text-muted-foreground">
             Dokuz Eylül Üniversitesi YBS bölümünde özel anınızı ölümsüzleştirin
           </p>
         </div>
 
         {/* Main Photo Area */}
-        <Card className="mb-8 p-8 bg-gradient-to-br from-card to-secondary/10 shadow-lg">
-          <div className="aspect-[4/3] max-w-2xl mx-auto bg-gradient-to-br from-muted/50 to-background rounded-2xl border-4 border-dashed border-muted-foreground/20 flex items-center justify-center overflow-hidden">
+        <Card className="mb-1 p-1.5 bg-gradient-to-br from-card to-secondary/10 shadow-lg flex-shrink min-h-0" style={{ flexBasis: '65%' }}>
+          <div className="w-full h-full max-w-4xl mx-auto bg-gradient-to-br from-muted/50 to-background rounded-xl flex items-center justify-center overflow-hidden">
             {photoTaken && previewImage ? (
-              <div className="w-full h-full relative">
+              <div className="w-full h-full relative flex items-center justify-center">
+                <div className="relative max-w-full max-h-full w-full" style={{ aspectRatio: displayAspectRatio }}>
                 <img 
                   src={previewImage} 
                   alt="Preview" 
-                  className="w-full h-full object-cover rounded-lg"
+                    className="absolute inset-0 w-full h-full object-contain rounded-lg"
                 />
-                <div className="absolute bottom-4 right-4 bg-primary text-primary-foreground px-3 py-1 rounded-lg text-sm font-medium">
-                  {photoFrames[currentFrame]?.name || 'Çerçeve'}
+                  <div className="absolute bottom-2 right-2 bg-primary text-primary-foreground px-2 py-1 rounded-lg text-xs font-medium">
+                    {photoFrames[currentFrame]?.name || 'Çerçeve'}
+                  </div>
                 </div>
               </div>
             ) : cameraActive ? (
-              <div className="w-full h-full relative">
-                <video
-                  id="camera-video"
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className={cn("w-full h-full object-cover rounded-lg", isMirrored && "scale-x-[-1]")}
-                />
-                {photoFrames[currentFrame] && (
-                  <div className="absolute inset-0 pointer-events-none">
-                    <img
-                      src={photoFrames[currentFrame].image_url}
-                      alt="Frame overlay"
-                      className="w-full h-full object-cover rounded-lg opacity-50"
+              <div className="w-full h-full relative flex items-center justify-center">
+                {/* Fixed inner wrapper so effects don't change outer frame size */}
+                <div className="relative max-w-full max-h-full w-full" style={{ aspectRatio: displayAspectRatio }}>
+                  {/* Camera box: constrain effects to this box only */}
+                  <div className="absolute inset-0 flex items-center justify-center overflow-hidden rounded-lg">
+                    <video
+                      id="camera-video"
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className={cn("w-full h-full object-contain rounded-lg transform-gpu")}
+                      style={{ transform: isMirrored ? 'scaleX(-1)' : 'none' }}
                     />
+                    {photoFrames[currentFrame] && (
+                      <img
+                        src={photoFrames[currentFrame].image_url}
+                        alt="Frame overlay"
+                        className="pointer-events-none absolute inset-0 w-full h-full object-contain rounded-lg opacity-50"
+                      />
+                    )}
+                    {isCountingDown && (
+                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
+                        <div className="text-6xl font-bold text-white">
+                          {countdown}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-                {isCountingDown && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
-                    <div className="text-8xl font-bold text-white">
-                      {countdown}
-                    </div>
+                  <div className="absolute bottom-2 right-2 bg-primary text-primary-foreground px-2 py-1 rounded-lg text-xs font-medium">
+                    {photoFrames[currentFrame]?.name || 'Çerçeve'}
                   </div>
-                )}
-                <div className="absolute bottom-4 right-4 bg-primary text-primary-foreground px-3 py-1 rounded-lg text-sm font-medium">
-                  {photoFrames[currentFrame]?.name || 'Çerçeve'}
                 </div>
               </div>
             ) : (
               <div className="text-center">
-                <Camera className="w-24 h-24 text-muted-foreground/40 mx-auto mb-4" />
-                <p className="text-2xl text-muted-foreground">
+                <Camera className="w-16 h-16 text-muted-foreground/40 mx-auto mb-2" />
+                <p className="text-xl text-muted-foreground">
                   Fotoğraf Önizleme Alanı
                 </p>
-                <p className="text-lg text-muted-foreground/60 mt-2">
+                <p className="text-sm text-muted-foreground/60 mt-1">
                   {photoFrames[currentFrame]?.name || 'Çerçeve seçili'} çerçevesi seçili
                 </p>
               </div>
@@ -315,28 +368,28 @@ export default function PhotoPage() {
         </Card>
 
         {/* Controls */}
-        <div className="flex flex-col items-center space-y-6">
+        <div className="flex flex-col items-center space-y-1.5 flex-shrink-0">
           {/* Frame Selection */}
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-2">
             <Button
               variant="outline"
-              size="lg"
+              size="sm"
               onClick={prevFrame}
-              className="w-16 h-16 rounded-full p-0"
+              className="w-8 h-8 rounded-full p-0"
             >
-              <ChevronLeft className="w-8 h-8" />
+              <ChevronLeft className="w-4 h-4" />
             </Button>
             
-            <div className="text-center min-w-[200px]">
-              <h3 className="text-2xl font-semibold text-primary mb-2">
+            <div className="text-center min-w-[120px]">
+              <h3 className="text-base font-semibold text-primary mb-0.5">
                 {photoFrames[currentFrame]?.name || 'Çerçeve Yok'}
               </h3>
-              <div className="flex justify-center space-x-2">
+              <div className="flex justify-center space-x-1">
                 {photoFrames.map((_, index) => (
                   <div
                     key={index}
                     className={cn(
-                      "w-3 h-3 rounded-full transition-all",
+                      "w-1.5 h-1.5 rounded-full transition-all",
                       index === currentFrame
                         ? "bg-primary scale-125"
                         : "bg-muted-foreground/30"
@@ -348,59 +401,59 @@ export default function PhotoPage() {
             
             <Button
               variant="outline"
-              size="lg"
+              size="sm"
               onClick={nextFrame}
-              className="w-16 h-16 rounded-full p-0"
+              className="w-8 h-8 rounded-full p-0"
             >
-              <ChevronRight className="w-8 h-8" />
+              <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-1.5">
             {!photoTaken ? (
               !cameraActive ? (
                 <Button
                   onClick={startCamera}
-                  size="lg"
-                  className="bg-gradient-to-r from-primary to-accent hover:from-primary-hover hover:to-accent-hover text-xl px-12 py-6 rounded-2xl shadow-lg"
+                  size="sm"
+                  className="bg-gradient-to-r from-primary to-accent hover:from-primary-hover hover:to-accent-hover text-sm px-4 py-3 rounded-lg shadow-lg"
                 >
-                  <Camera className="w-8 h-8 mr-3" />
+                  <Camera className="w-4 h-4 mr-1.5" />
                   Kamerayı Aç
                 </Button>
               ) : (
-                <div className="flex flex-col items-center gap-3">
+                <div className="flex flex-col items-center gap-1">
                   {/* Timer Selection */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm text-muted-foreground">Gecikme:</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground">Gecikme:</span>
                     {[0, 3, 5, 10].map((seconds) => (
                       <Button
                         key={seconds}
                         variant={photoTimer === seconds ? "default" : "outline"}
                         size="sm"
                         onClick={() => setPhotoTimer(seconds)}
-                        className="w-12 h-8 text-sm"
+                        className="w-8 h-6 text-[10px] p-0"
                       >
                         {seconds}s
                       </Button>
                     ))}
                   </div>
                   
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1">
                     <Button
                       onClick={startPhotoTimer}
                       disabled={isCountingDown}
-                      size="lg"
-                      className="bg-gradient-to-r from-primary to-accent hover:from-primary-hover hover:to-accent-hover text-xl px-12 py-6 rounded-2xl shadow-lg"
+                      size="sm"
+                      className="bg-gradient-to-r from-primary to-accent hover:from-primary-hover hover:to-accent-hover text-sm px-4 py-3 rounded-lg shadow-lg"
                     >
-                      <Camera className="w-8 h-8 mr-3" />
+                      <Camera className="w-4 h-4 mr-1.5" />
                       {isCountingDown ? `${countdown}...` : photoTimer === 0 ? 'Fotoğraf Çek' : `${photoTimer}s Sonra Çek`}
                     </Button>
                     <Button
                       variant="outline"
-                      size="lg"
+                      size="sm"
                       onClick={() => setIsMirrored((v) => !v)}
-                      className="text-lg px-6 py-6"
+                      className="text-xs px-2 py-3"
                     >
                       {isMirrored ? 'Aynalamayı Kapat' : 'Aynala'}
                     </Button>
@@ -412,26 +465,26 @@ export default function PhotoPage() {
                 <Button
                   onClick={resetPhoto}
                   variant="outline"
-                  size="lg"
-                  className="text-lg px-8 py-4"
+                  size="sm"
+                  className="text-xs px-3 py-3"
                 >
                   Yeniden Çek
                 </Button>
                 <Button
                   onClick={savePhoto}
-                  size="lg"
-                  className="bg-accent hover:bg-accent-hover text-lg px-8 py-4"
+                  size="sm"
+                  className="bg-accent hover:bg-accent-hover text-xs px-3 py-3"
                 >
-                  <Download className="w-6 h-6 mr-2" />
+                  <Download className="w-3 h-3 mr-1" />
                   Kaydet
                 </Button>
                 <Button
                   onClick={saveAndSharePhoto}
-                  size="lg"
+                  size="sm"
                   variant="outline"
-                  className="text-lg px-8 py-4"
+                  className="text-xs px-3 py-3"
                 >
-                  <Share2 className="w-6 h-6 mr-2" />
+                  <Share2 className="w-3 h-3 mr-1" />
                   Kaydet ve Paylaş
                 </Button>
               </>
@@ -445,14 +498,6 @@ export default function PhotoPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-center">Fotoğrafı Paylaş</DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute right-4 top-4"
-              onClick={() => setShowQR(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </DialogHeader>
           <div className="flex flex-col items-center space-y-4 p-4">
             <p className="text-sm text-muted-foreground text-center">

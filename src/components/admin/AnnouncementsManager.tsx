@@ -159,6 +159,11 @@ export const AnnouncementsManager = () => {
                   id="content"
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.stopPropagation();
+                    }
+                  }}
                   required
                   rows={4}
                 />

@@ -21,9 +21,9 @@ const quickActions = [
 ];
 
 const stats = [
-  { label: 'Aktif Öğrenci', value: '847', icon: GraduationCap },
+  { label: 'Aktif Öğrenci', value: '650+', icon: GraduationCap },
   { label: 'Öğretim Üyesi', value: '23', icon: Users },
-  { label: 'Bu Hafta Ders', value: '156', icon: Clock },
+  { label: 'Mezun Sayımız', value: '2000', icon: Clock },
   { label: 'Kampüs Alanı', value: '2.5km²', icon: MapPin }
 ];
 
@@ -34,17 +34,40 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
       {/* Hero Section */}
       <div className="relative bg-gradient-to-r from-primary via-primary-hover to-accent text-white py-16 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-5xl font-bold mb-4">
-            Dokuz Eylül Üniversitesi
-          </h1>
-          <h2 className="text-3xl font-semibold mb-6 opacity-90">
-            Yönetim Bilişim Sistemleri
-          </h2>
-          <p className="text-xl opacity-80 max-w-2xl mx-auto">
-            İnteraktif kiosk sistemimize hoş geldiniz. Bölümümüz hakkında bilgi alın, 
-            duyuruları takip edin ve hatıra fotoğraflarınızı çekin.
-          </p>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center gap-8">
+            {/* Sol Logo */}
+            <div className="hidden lg:block flex-shrink-0">
+              <img 
+                src="/deu.png" 
+                alt="DEÜ Logo" 
+                className="h-32 w-32 object-contain"
+              />
+            </div>
+
+            {/* Orta Yazı */}
+            <div className="text-center">
+              <h1 className="text-5xl font-bold mb-4">
+                Dokuz Eylül Üniversitesi
+              </h1>
+              <h2 className="text-3xl font-semibold mb-6 opacity-90">
+                Yönetim Bilişim Sistemleri
+              </h2>
+              <p className="text-xl opacity-80 max-w-2xl mx-auto">
+                İnteraktif kiosk sistemimize hoş geldiniz. Bölümümüz hakkında bilgi alın, 
+                duyuruları takip edin ve hatıra fotoğraflarınızı çekin.
+              </p>
+            </div>
+
+            {/* Sağ Logo */}
+            <div className="hidden lg:block flex-shrink-0">
+              <img 
+                src="/deu-ybs-logo.png" 
+                alt="DEÜ YBS Logo" 
+                className="h-32 w-32 object-contain"
+              />
+            </div>
+          </div>
         </div>
         
         {/* Decorative Elements */}
@@ -140,13 +163,13 @@ export default function HomePage() {
         </section>
       </div>
       
-      {/* Invisible Admin Panel Access Button */}
-      <div className="fixed top-4 right-4">
+      {/* Admin Panel Access Button */}
+      <div className="fixed bottom-4 right-4">
         <Button
           onClick={() => navigate("/admin-login")}
-          variant="ghost"
+          variant="outline"
           size="sm"
-          className="opacity-0 w-12 h-12"
+          className="opacity-60 hover:opacity-100 transition-opacity"
         >
           <Settings className="h-4 w-4" />
         </Button>

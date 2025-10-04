@@ -88,38 +88,53 @@ export type Database = {
       }
       faculty_members: {
         Row: {
+          category: string | null
+          contact_info: string | null
           created_at: string
           department: string
+          display_order: number | null
+          education: string | null
           email: string | null
           id: string
           image_url: string | null
           name: string
           office: string | null
           phone: string | null
+          specialization: string | null
           title: string
           updated_at: string
         }
         Insert: {
+          category?: string | null
+          contact_info?: string | null
           created_at?: string
           department: string
+          display_order?: number | null
+          education?: string | null
           email?: string | null
           id?: string
           image_url?: string | null
           name: string
           office?: string | null
           phone?: string | null
+          specialization?: string | null
           title: string
           updated_at?: string
         }
         Update: {
+          category?: string | null
+          contact_info?: string | null
           created_at?: string
           department?: string
+          display_order?: number | null
+          education?: string | null
           email?: string | null
           id?: string
           image_url?: string | null
           name?: string
           office?: string | null
           phone?: string | null
+          specialization?: string | null
           title?: string
           updated_at?: string
         }
@@ -360,12 +375,17 @@ export type Database = {
       get_public_faculty_members: {
         Args: Record<PropertyKey, never>
         Returns: {
+          category: string
+          contact_info: string
           created_at: string
           department: string
+          display_order: number
+          education: string
           id: string
           image_url: string
           name: string
           office: string
+          specialization: string
           title: string
           updated_at: string
         }[]
