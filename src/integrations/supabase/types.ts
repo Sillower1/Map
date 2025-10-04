@@ -94,13 +94,20 @@ export type Database = {
           department: string
           display_order: number | null
           education: string | null
+          education_display_order: number | null
           email: string | null
+          email_display_order: number | null
           id: string
           image_url: string | null
+          linkedin: string | null
+          linkedin_display_order: number | null
           name: string
           office: string | null
+          office_display_order: number | null
           phone: string | null
+          phone_display_order: number | null
           specialization: string | null
+          specialization_display_order: number | null
           title: string
           updated_at: string
         }
@@ -111,13 +118,20 @@ export type Database = {
           department: string
           display_order?: number | null
           education?: string | null
+          education_display_order?: number | null
           email?: string | null
+          email_display_order?: number | null
           id?: string
           image_url?: string | null
+          linkedin?: string | null
+          linkedin_display_order?: number | null
           name: string
           office?: string | null
+          office_display_order?: number | null
           phone?: string | null
+          phone_display_order?: number | null
           specialization?: string | null
+          specialization_display_order?: number | null
           title: string
           updated_at?: string
         }
@@ -128,13 +142,20 @@ export type Database = {
           department?: string
           display_order?: number | null
           education?: string | null
+          education_display_order?: number | null
           email?: string | null
+          email_display_order?: number | null
           id?: string
           image_url?: string | null
+          linkedin?: string | null
+          linkedin_display_order?: number | null
           name?: string
           office?: string | null
+          office_display_order?: number | null
           phone?: string | null
+          phone_display_order?: number | null
           specialization?: string | null
+          specialization_display_order?: number | null
           title?: string
           updated_at?: string
         }
