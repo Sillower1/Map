@@ -26,6 +26,7 @@ interface Marker {
   is_active: boolean;
   size?: number;
   icon?: string | null;
+  floor_info?: string | null;
 }
 
 const getIconByKey = (key?: string | null) => {
@@ -276,7 +277,7 @@ export default function MapPage() {
                                 height: `${marker.size || 24}px`
                               }} 
                             />
-                            {(isSelected && (marker.description || (marker as any).floor_info)) && (
+                            {isSelected && marker.description && (
                               <div
                                 className="absolute top-full mt-2 left-1/2 bg-card border border-border rounded-lg p-2 shadow-lg min-w-[200px] z-30"
                                 style={{
@@ -284,12 +285,7 @@ export default function MapPage() {
                                   transformOrigin: 'top center'
                                 }}
                               >
-                                {(marker as any).floor_info && (
-                                  <div className="text-[11px] font-medium text-primary mb-1">{(marker as any).floor_info}</div>
-                                )}
-                                {marker.description && (
-                                  <p className="text-xs text-muted-foreground whitespace-pre-line">{marker.description}</p>
-                                )}
+                                <p className="text-xs text-muted-foreground whitespace-pre-line">{marker.description}</p>
                               </div>
                             )}
                           </div>
@@ -297,15 +293,16 @@ export default function MapPage() {
                       );
                     })
                   )}
-                    </div>
-                  </div>
-                  
-                  {/* Floor Labels */}
-                  <div className="absolute bottom-4 left-4 space-y-1">
-                    <Badge variant="outline" className="bg-card/80">3. Kat - Ofisler</Badge>
-                    <Badge variant="outline" className="bg-card/80">2. Kat - Laboratuvarlar</Badge>
-                    <Badge variant="outline" className="bg-card/80">1. Kat - Derslikler</Badge>
-                  </div>
+                  {/* Dynamic floor info: show at bottom-left when selected marker has floor_info */}
+                  {(() => {
+                    const m = markers.find(m => m.id === selectedLocation);
+                    if (!m || !m.floor_info) return null;
+                    return (
+                      <div className="absolute bottom-4 left-4">
+                        <Badge variant="outline" className="bg-card/80">{m.floor_info}</Badge>
+                      </div>
+                    );
+                  })()}
                 </div>
               </CardContent>
             </Card>
